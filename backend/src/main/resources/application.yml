@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: ganum-backend
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+      fail-on-numbers-for-enums: true
+
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+ganum:
+  store-name: ${GANUM_STORE_NAME:우리동네 분식}
