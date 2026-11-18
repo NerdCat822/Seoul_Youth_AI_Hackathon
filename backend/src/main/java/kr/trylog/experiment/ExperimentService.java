@@ -1,4 +1,4 @@
-package kr.ganum.experiment;
+package kr.trylog.experiment;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -6,8 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import kr.ganum.shared.InvalidInputException;
-import kr.ganum.shared.NotFoundException;
+import kr.trylog.shared.InvalidInputException;
+import kr.trylog.shared.NotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service

@@ -1,4 +1,4 @@
-package kr.ganum.shared;
+package kr.trylog.shared;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

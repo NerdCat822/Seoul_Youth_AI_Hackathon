@@ -1,4 +1,4 @@
-package kr.ganum.overview;
+package kr.trylog.overview;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -14,7 +14,7 @@ public class OverviewController {
     private final Clock clock;
     private final String storeName;
 
-    public OverviewController(Clock clock, @Value("${ganum.store-name}") String storeName) {
+    public OverviewController(Clock clock, @Value("${trylog.store-name}") String storeName) {
         this.clock = clock;
         this.storeName = storeName;
     }

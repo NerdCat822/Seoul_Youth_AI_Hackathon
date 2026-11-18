@@ -15,3 +15,4 @@
 - 2026-11-13 `npm run build` 성공: TypeScript 검사 및 Vite 프로덕션 번들 생성.
 - 2026-11-13 `npm run format:check` 성공. Prettier 3.10.1 고정, `npm run format`으로 소스/설정 서식 유지.
 - 2026-11-13 `npm run dev` 실행 확인. 이후 실제 브라우저 접근이 가능한 로컬 서버로 기동하여 등록·새로고침·달력·사례 필터·오류 재시도를 통합 검증했다. 320/390/1440px 가로 넘침과 런타임 오류 없음. 상세는 `docs/verification.md`.
+- 2026-11-18 서비스명 변경 후 `npm run build`, `npm run format:check` 성공. preview와 백엔드 JAR로 320px·390px 머리글(브랜드 "트라이로그")의 가로 넘침·겹침 없음 확인. 상세는 `docs/verification.md`.

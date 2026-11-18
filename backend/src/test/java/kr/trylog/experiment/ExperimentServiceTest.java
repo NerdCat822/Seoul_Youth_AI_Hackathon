@@ -1,4 +1,4 @@
-package kr.ganum.experiment;
+package kr.trylog.experiment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

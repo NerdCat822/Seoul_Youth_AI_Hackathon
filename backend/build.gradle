@@ -3,9 +3,9 @@ plugins {
     id 'org.springframework.boot' version '3.5.16'
 }
 
-group = 'kr.ganum'
+group = 'kr.trylog'
 version = '0.0.1-SNAPSHOT'
-description = '가늠 - 사장님의 작은 장사 비서'
+description = '트라이로그 - 사장님의 작은 장사 비서'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17

@@ -1,6 +1,6 @@
 spring:
   application:
-    name: ganum-backend
+    name: trylog-backend
   jackson:
     deserialization:
       fail-on-unknown-properties: true
@@ -13,5 +13,5 @@ server:
     include-message: never
     include-stacktrace: never
 
-ganum:
-  store-name: ${GANUM_STORE_NAME:우리동네 분식}
+trylog:
+  store-name: ${TRYLOG_STORE_NAME:우리동네 분식}

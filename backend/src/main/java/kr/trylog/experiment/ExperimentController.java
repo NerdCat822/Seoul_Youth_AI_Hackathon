@@ -1,4 +1,4 @@
-package kr.ganum.experiment;
+package kr.trylog.experiment;
 
 import jakarta.validation.Valid;
 import java.net.URI;

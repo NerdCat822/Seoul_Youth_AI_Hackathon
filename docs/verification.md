@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 2026-11-18 서비스명 변경 (가늠 → 트라이로그)
+
+- 서비스명을 트라이로그(영문 trylog)로 바꿨다. 백엔드 패키지 `kr.trylog`, 메인 클래스 `TrylogApplication`, 결과물 `trylog-backend`, 설정 키 `trylog.store-name`(환경변수 `TRYLOG_STORE_NAME`), 프런트 패키지 `trylog-frontend`.
+- WSL(Linux), JDK 21에서 `sh gradlew --no-daemon clean build`: `BUILD SUCCESSFUL`. JUnit 테스트 11개(통합 8, 서비스 3) 실패·오류·건너뜀 0개. `build/libs/trylog-backend-0.0.1-SNAPSHOT.jar` 생성. Linux에서 Wrapper 실행을 확인한 첫 기록이다.
+- 생성 JAR를 8080에서 실행해 `/api/v1/overview`가 `storeName` `우리동네 분식`(바뀐 설정 키의 기본값)을 반환함을 확인했다.
+- 프런트 `npm ci`, `npm run build`(tsc + vite build) 성공. `npm run format:check` 통과.
+- `vite preview`(4173)와 위 JAR를 함께 실행해 320px·390px에서 홈, 사례 목록, 사례 상세(뒤로 버튼 있음), 장사 기록의 머리글을 확인했다. 가로 넘침 없음, 브랜드 "트라이로그"와 가게 칩이 겹치지 않음(320px 사례 상세에서 간격 35px), 머리글 높이 64px 유지. 확인 후 두 서버를 종료했다.
+- 시도 등록·조회 등 브라우저 전체 흐름은 이번에 다시 검증하지 않았다.
+- 아래 2026-11-13 기록의 이름(`ganum-backend` 등)은 당시 결과 그대로 둔다.
+
 ## 2026-11-13 실행 안내 문서 보완
 
 - `README.md`에 로컬 Gradle 기준의 준비·실행·종료·빌드·환경설정·문제 해결 절차를 정리했다.

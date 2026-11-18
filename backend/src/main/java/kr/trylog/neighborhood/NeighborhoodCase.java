@@ -1,6 +1,6 @@
-package kr.ganum.neighborhood;
+package kr.trylog.neighborhood;
 
-import kr.ganum.experiment.Category;
+import kr.trylog.experiment.Category;
 
 public record NeighborhoodCase(
         String id, String title, Category category, Difficulty difficulty,

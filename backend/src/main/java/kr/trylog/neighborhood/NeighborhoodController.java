@@ -1,8 +1,8 @@
-package kr.ganum.neighborhood;
+package kr.trylog.neighborhood;
 
 import java.util.List;
-import kr.ganum.experiment.Category;
-import kr.ganum.neighborhood.NeighborhoodCase.Difficulty;
+import kr.trylog.experiment.Category;
+import kr.trylog.neighborhood.NeighborhoodCase.Difficulty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

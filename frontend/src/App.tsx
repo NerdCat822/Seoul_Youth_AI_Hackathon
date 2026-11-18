@@ -134,8 +134,8 @@ export function App() {
                 <Icon name="back" size={20} />
               </a>
             )}
-            <a className="brand" href="#/" aria-label="가늠 홈">
-              가늠
+            <a className="brand" href="#/" aria-label="트라이로그 홈">
+              트라이로그
               <span className="brand-dot" />
             </a>
           </div>
@@ -174,7 +174,7 @@ export function App() {
         </div>
       </div>
       <p className="desktop-caption">
-        가늠 <span>작은 시도를, 더 나은 내일로.</span>
+        트라이로그 <span>작은 시도를, 더 나은 내일로.</span>
       </p>
     </div>
   );

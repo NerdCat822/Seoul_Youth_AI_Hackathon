@@ -1,4 +1,4 @@
-# 가늠 · 사장님의 작은 장사 비서
+# 트라이로그 · 사장님의 작은 장사 비서
 
 첨부 목업과 해커톤 기획서를 바탕으로 만든 React / Spring Boot 프로젝트 기초입니다.
 DB 없이 실행하며, 가게에서 바꿔볼 일을 등록하고 달력과 장사 기록에서 확인할 수 있습니다.
@@ -71,7 +71,7 @@ npm run dev
 
 | 용도 | 주소 |
 | --- | --- |
-| 가늠 화면 | [http://127.0.0.1:5173](http://127.0.0.1:5173) |
+| 트라이로그 화면 | [http://127.0.0.1:5173](http://127.0.0.1:5173) |
 | 백엔드 상태 | [http://127.0.0.1:8080/api/v1/health](http://127.0.0.1:8080/api/v1/health) |
 | 가게 정보 | [http://127.0.0.1:8080/api/v1/overview](http://127.0.0.1:8080/api/v1/overview) |
 
@@ -106,7 +106,7 @@ gradle clean build
 
 - 테스트만 실행: 같은 폴더에서 `gradle test`
 - 테스트 결과: `backend/build/reports/tests/test/index.html`
-- 실행 JAR: `backend/build/libs/ganum-backend-0.0.1-SNAPSHOT.jar`
+- 실행 JAR: `backend/build/libs/trylog-backend-0.0.1-SNAPSHOT.jar`
 
 프런트엔드 서식 검사 및 프로덕션 빌드:
 
@@ -126,7 +126,7 @@ npm run build
 
 ```powershell
 Set-Location 'D:\src\Seoul_Youth_AI_Hackathon\backend'
-java -jar .\build\libs\ganum-backend-0.0.1-SNAPSHOT.jar
+java -jar .\build\libs\trylog-backend-0.0.1-SNAPSHOT.jar
 ```
 
 터미널 B에서 프런트 빌드 미리보기를 실행합니다. 아직 `npm run dev`가 실행 중이라면 먼저 `Ctrl+C`로 종료해주세요.
@@ -148,17 +148,17 @@ npm run preview
 | --- | --- | --- |
 | `SERVER_ADDRESS` | `127.0.0.1` | 백엔드가 요청을 받을 주소 |
 | `SERVER_PORT` | `8080` | 백엔드 포트 |
-| `GANUM_STORE_NAME` | `우리동네 분식` | 화면에 표시할 가게 이름 |
+| `TRYLOG_STORE_NAME` | `우리동네 분식` | 화면에 표시할 가게 이름 |
 
 가게 이름을 바꾸려면 백엔드를 실행할 PowerShell에서 설정합니다.
 
 ```powershell
 Set-Location 'D:\src\Seoul_Youth_AI_Hackathon\backend'
-$env:GANUM_STORE_NAME = '우리동네 카페'
+$env:TRYLOG_STORE_NAME = '우리동네 카페'
 gradle bootRun
 ```
 
-이 설정은 해당 터미널 세션에 적용됩니다. 기본값으로 되돌리려면 서버를 종료하고 `Remove-Item Env:GANUM_STORE_NAME`을 실행한 뒤 서버를 다시 시작합니다.
+이 설정은 해당 터미널 세션에 적용됩니다. 기본값으로 되돌리려면 서버를 종료하고 `Remove-Item Env:TRYLOG_STORE_NAME`을 실행한 뒤 서버를 다시 시작합니다.
 
 백엔드 포트를 바꾸면 [frontend/vite.config.ts](frontend/vite.config.ts)의 `server.proxy['/api'].target`도 같은 포트로 맞추고 프런트 개발 서버를 다시 시작해야 합니다.
 
