@@ -24,3 +24,7 @@
 | 2026-11-13 | 백엔드 빌드 도구 | 사용자 요청에 따라 Gradle 8.14.7 Wrapper + Groovy DSL 사용. Maven 구성 제거 | 사용자 Gradle 선호를 반영. Spring Boot 및 Java 17 호환 소스 유지. 새 근거 없이 Maven으로 복귀하지 않음 |
 | 2026-11-13 | Gradle 실행 방식 | 사용자가 로컬 Gradle을 직접 설치할 예정. 기본 안내는 `gradle bootRun` / `gradle clean build`, Wrapper는 선택적으로 유지 | 사용자 개발 환경 선호 반영. 검증한 버전은 8.14.7이며 새 로컬 설치의 완료 여부는 아직 확인하지 않음 |
 | 2026-11-13 | 실행 안내 위치 | 루트 `README.md`에 준비·개발 실행·종료·빌드·환경변수·오류 해결을 통합. Windows PowerShell과 로컬 Gradle을 기본으로 설명 | 사용자가 프로젝트 실행 방법의 문서화를 요청. 별도 실행 문서와 명령이 중복되지 않도록 한곳에서 관리 |
+| 2026-11-16 | 백엔드 기반 변경 | Spring Boot 대신 Python FastAPI 사용. 위의 Spring Boot · Gradle 결정을 대체한다. 코드 이전은 아직 하지 않았고, 이전 전까지 기존 Spring 코드를 유지 | 사용자 결정 |
+| 2026-11-16 | 역할 분담 | 김현규 AI 에이전트 · 백엔드, 박병민 풀스택, 서재원 ML · DB, 김도훈 기획, 김주연 디자인. 작업별 배정은 `docs/trylog-wbs.xlsx` 초안 기준이며 팀 검토 전 | 사용자 결정 |
+| 2026-11-16 | 백엔드 · 통합 담당 | 통합 · 배포는 김현규. 백엔드 작업은 김현규 2개(FastAPI), 박병민 3개(Spring Boot)로 나눔. 위 "백엔드 기반 변경"(FastAPI로 전환)과의 관계, 즉 두 서버를 함께 둘지는 확인 필요 | 사용자 결정. 김현규는 FastAPI, 박병민은 Spring Boot를 주로 사용 |
+| 2026-11-18 | 서비스명 | 가늠 → 트라이로그(영문 trylog). 문서 제목·본문, 화면 문구, 백엔드 패키지 `kr.trylog` · 결과물 `trylog-backend` · 환경변수 `TRYLOG_STORE_NAME`, 프런트 패키지 `trylog-frontend`, 산출물 파일 이름(`docs/trylog-wbs.xlsx`, `docs/pdf/trylog-*.pdf`)을 바꿈. 사용자 제공 원본(기획서 PDF, 목업 HTML)도 사용자 요청에 따라 파일 이름과 안의 글자까지 바꿈. 바꾸기 전 사본은 `tmp/원본-보관/`(git 제외). 2026-11-13 검증 기록의 이름은 그대로 둠 | 사용자 결정 |
