@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1042" height="746" viewBox="0 0 1042 746" font-family="NanumSquare, NanumBarunGothic, NanumGothic, sans-serif">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#394150"/></marker><marker id="arrx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0F2A5F"/></marker></defs>
+<rect width="1042" height="746" fill="#FFFFFF"/>
+<rect x="26" y="14" width="996" height="102" rx="14" fill="#F8FAFC" stroke="#D3DAE6"/>
+<text x="44" y="41" font-size="17" font-weight="800" fill="#1A2333">주 메뉴</text>
+<text x="114" y="41" font-size="12.5" fill="#4B5565">세 화면에서는 하단 탭으로 언제든 서로 이동합니다</text>
+<rect x="44" y="66" width="58" height="30" rx="15" fill="#1A2333"/>
+<text x="73" y="86" font-size="12.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">접속</text>
+<path d="M102,81 L127,81" stroke="#394150" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="128" y="56" width="282" height="50" rx="9" fill="#E5EFFD" stroke="#1F5FBF" stroke-width="1.6"/>
+<text x="269.0" y="77" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">홈</text>
+<text x="269.0" y="95" font-size="12" fill="#4B5565" text-anchor="middle">오늘 확인할 일 · 한마디 입력 · 내가 남긴 시도</text>
+<rect x="438" y="56" width="268" height="50" rx="9" fill="#E2F4EA" stroke="#1E7A52" stroke-width="1.6"/>
+<text x="572.0" y="77" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">달력</text>
+<text x="572.0" y="95" font-size="12" fill="#4B5565" text-anchor="middle">날짜별 시작일 · 확인일 일정</text>
+<rect x="734" y="56" width="270" height="50" rx="9" fill="#EEE8FC" stroke="#5B3FB8" stroke-width="1.6"/>
+<text x="869.0" y="77" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">장사 기록</text>
+<text x="869.0" y="95" font-size="12" fill="#4B5565" text-anchor="middle">내 가게 탭 · 동네 가게 탭</text>
+<text x="424" y="87" font-size="17" fill="#4B5565" text-anchor="middle">↔</text>
+<text x="720" y="87" font-size="17" fill="#4B5565" text-anchor="middle">↔</text>
+<rect x="26" y="132" width="280" height="374" rx="14" fill="#F8FAFC" stroke="#D3DAE6"/>
+<text x="44" y="160" font-size="17" font-weight="800" fill="#1A2333">해볼 일 찾기</text>
+<text x="44" y="178" font-size="12.5" fill="#4B5565">비슷한 가게가 해본 일부터 봅니다</text>
+<rect x="356" y="132" width="280" height="456" rx="14" fill="#F8FAFC" stroke="#D3DAE6"/>
+<text x="374" y="160" font-size="17" font-weight="800" fill="#1A2333">시도 남기기</text>
+<text x="374" y="178" font-size="12.5" fill="#4B5565">평소 말투로 남기면 트라이로그가 정리합니다</text>
+<rect x="686" y="132" width="336" height="598" rx="14" fill="#F8FAFC" stroke="#D3DAE6"/>
+<text x="704" y="160" font-size="17" font-weight="800" fill="#1A2333">결과 확인하기</text>
+<text x="704" y="178" font-size="12.5" fill="#4B5565">확인할 날에 자료를 올려 결과를 봅니다</text>
+<path d="M174.0,266 L174.0,311" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M174.0,378 L174.0,423" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M56,233.0 L41,233.0 L41,457.0 L55,457.0" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M384,266 L384,423" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M556.0,266 L556.0,311" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M556.0,378 L556.0,423" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M418,490 L418,541" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="388" y="542" width="60" height="28" rx="14" fill="#1F5FBF"/>
+<text x="418" y="560.5" font-size="12.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">홈</text>
+<path d="M768.5,266 L768.5,311" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M921.5,266 L921.5,311" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M921.5,378 L921.5,423" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M921.5,490 L921.5,535" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M990,233.0 L1006,233.0 L1006,569.0 L991,569.0" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M768.5,602 L768.5,647" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M837,681.0 L852,681.0" fill="none" stroke="#394150" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arr)"/>
+<path d="M292,457.0 L369,457.0" fill="none" stroke="#0F2A5F" stroke-width="2.2" stroke-linejoin="round" marker-end="url(#arrx)"/>
+<path d="M700,569.0 L582,569.0 L582,491" fill="none" stroke="#0F2A5F" stroke-width="2.2" stroke-linejoin="round" marker-end="url(#arrx)"/>
+<rect x="56" y="200" width="236" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="174.0" y="229" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">0원으로 해볼 일</text>
+<text x="174.0" y="248" font-size="12.5" fill="#4B5565" text-anchor="middle">추가 지출 없는 사례 목록</text>
+<rect x="66" y="191" width="24.5" height="17" rx="8.5" fill="#1F5FBF"/>
+<text x="78.25" y="203.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">홈</text>
+<rect x="56" y="312" width="236" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="174.0" y="341" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">동네 가게 사례</text>
+<text x="174.0" y="360" font-size="12.5" fill="#4B5565" text-anchor="middle">분류 · 난이도로 고르기</text>
+<rect x="66" y="303" width="24.5" height="17" rx="8.5" fill="#1F5FBF"/>
+<text x="78.25" y="315.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">홈</text>
+<rect x="95.5" y="303" width="61.25" height="17" rx="8.5" fill="#5B3FB8"/>
+<text x="126.125" y="315.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">장사 기록</text>
+<rect x="56" y="424" width="236" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="174.0" y="453" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">사례 상세</text>
+<text x="174.0" y="472" font-size="12.5" fill="#4B5565" text-anchor="middle">준비할 일 · 비용 · 결과 분포</text>
+<rect x="370" y="200" width="252" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="496.0" y="229" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">한마디 입력</text>
+<text x="496.0" y="248" font-size="12.5" fill="#4B5565" text-anchor="middle">말하기 또는 글</text>
+<rect x="380" y="191" width="24.5" height="17" rx="8.5" fill="#1F5FBF"/>
+<text x="392.25" y="203.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">홈</text>
+<rect x="490" y="312" width="132" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="556.0" y="341" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">아이디어 제안</text>
+<text x="556.0" y="360" font-size="12.5" fill="#4B5565" text-anchor="middle">해볼 일 고르기</text>
+<rect x="370" y="424" width="252" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="496.0" y="453" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">이렇게 해둘게요</text>
+<text x="496.0" y="472" font-size="12.5" fill="#4B5565" text-anchor="middle">해볼 일 · 기간 · 확인할 날 · 볼 숫자</text>
+<rect x="700" y="200" width="290" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="845.0" y="229" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">시도 열기</text>
+<text x="845.0" y="248" font-size="12.5" fill="#4B5565" text-anchor="middle">확인할 날이 됐는지에 따라 이동</text>
+<rect x="710" y="191" width="24.5" height="17" rx="8.5" fill="#1F5FBF"/>
+<text x="722.25" y="203.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">홈</text>
+<rect x="739.5" y="191" width="35.0" height="17" rx="8.5" fill="#1E7A52"/>
+<text x="757.0" y="203.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">달력</text>
+<rect x="779.5" y="191" width="61.25" height="17" rx="8.5" fill="#5B3FB8"/>
+<text x="810.125" y="203.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">장사 기록</text>
+<rect x="700" y="312" width="137" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="768.5" y="341" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">진행 중인 시도</text>
+<text x="768.5" y="360" font-size="12.5" fill="#4B5565" text-anchor="middle">확인 예정일 안내</text>
+<rect x="853" y="312" width="137" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="921.5" y="341" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">판매 자료 올리기</text>
+<text x="921.5" y="360" font-size="12.5" fill="#4B5565" text-anchor="middle">사진 · 엑셀 선택</text>
+<rect x="853" y="424" width="137" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="921.5" y="453" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">자료 확인</text>
+<text x="921.5" y="472" font-size="12.5" fill="#4B5565" text-anchor="middle">비교 기간과 항목</text>
+<rect x="700" y="536" width="290" height="66" rx="9" fill="#FFFFFF" stroke="#7C8799" stroke-width="1.4"/>
+<text x="845.0" y="565" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">시도 결과</text>
+<text x="845.0" y="584" font-size="12.5" fill="#4B5565" text-anchor="middle">주문 수 · 비중 · 읽어주기</text>
+<rect x="700" y="648" width="137" height="66" rx="9" fill="#F8FAFC" stroke="#7C8799" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="768.5" y="677" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">매출 예상 비교</text>
+<text x="768.5" y="696" font-size="12.5" fill="#4B5565" text-anchor="middle">화면 예시</text>
+<rect x="853" y="648" width="137" height="66" rx="9" fill="#F8FAFC" stroke="#7C8799" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="921.5" y="677" font-size="15" font-weight="800" fill="#1A2333" text-anchor="middle">재료 준비량 추천</text>
+<text x="921.5" y="696" font-size="12.5" fill="#4B5565" text-anchor="middle">화면 예시</text>
+<g><rect x="178.0" y="282.42" width="116.97500000000001" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="181.0" y="293.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="start">모든 동네 사례 보기</text></g>
+<g><rect x="178.0" y="394.42" width="58.325" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="181.0" y="405.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="start">사례 선택</text></g>
+<g transform="rotate(-90 45 345.0)"><rect x="15.837499999999999" y="334.42" width="58.325" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="45" y="345.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="middle">사례 선택</text></g>
+<g><rect x="389" y="331.42" width="58.325" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="392" y="342.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="start">바꾼 일을</text></g>
+<g><rect x="389" y="346.42" width="40.5" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="392" y="357.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="start">말하면</text></g>
+<g><rect x="470.675" y="282.42" width="81.325" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="549.0" y="293.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="end">고민을 말하면</text></g>
+<g><rect x="441.35" y="394.42" width="110.65" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="549.0" y="405.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="end">이 시도로 이어가기</text></g>
+<g><rect x="422" y="509.42" width="69.825" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="425" y="520.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="start">이대로 저장</text></g>
+<g><rect x="772.5" y="282.42" width="29.0" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="775.5" y="293.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="start">아직</text></g>
+<g><rect x="925.5" y="282.42" width="46.825" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="928.5" y="293.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="start">됐을 때</text></g>
+<g transform="rotate(-90 1010 401.0)"><rect x="960.425" y="390.42" width="99.15" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="1010" y="401.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="middle">이미 확인했을 때</text></g>
+<g><rect x="772.5" y="618.42" width="146.3" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="775.5" y="629.0" font-size="11.5" font-weight="700" fill="#4B5565" text-anchor="start">실제·예상 매출 비교 보기</text></g>
+<g><rect x="287.175" y="438.42" width="87.65" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="331.0" y="449.0" font-size="11.5" font-weight="700" fill="#0F2A5F" text-anchor="middle">이 시도 남기기</text></g>
+<g><rect x="589.675" y="550.42" width="110.65" height="14.950000000000001" rx="3" fill="#F8FAFC"/><text x="645.0" y="561.0" font-size="11.5" font-weight="700" fill="#0F2A5F" text-anchor="middle">이 시도로 이어가기</text></g>
+<rect x="26" y="522" width="280" height="208" rx="14" fill="#FFFFFF" stroke="#D3DAE6"/>
+<text x="44" y="550" font-size="14" font-weight="800" fill="#1A2333">읽는 법</text>
+<rect x="44" y="564" width="24.5" height="17" rx="8.5" fill="#1F5FBF"/>
+<text x="56.25" y="576.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">홈</text>
+<rect x="73.5" y="564" width="35.0" height="17" rx="8.5" fill="#1E7A52"/>
+<text x="91.0" y="576.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">달력</text>
+<rect x="113.5" y="564" width="61.25" height="17" rx="8.5" fill="#5B3FB8"/>
+<text x="144.125" y="576.5" font-size="10.5" font-weight="800" fill="#FFFFFF" text-anchor="middle">장사 기록</text>
+<text x="44" y="600" font-size="11.5" fill="#4B5565">꼬리표는 그 화면으로 들어갈 수 있는</text>
+<text x="44" y="616" font-size="11.5" fill="#4B5565">주 메뉴입니다.</text>
+<rect x="44" y="630" width="26" height="14" rx="4" fill="#F8FAFC" stroke="#7C8799" stroke-width="1.4" stroke-dasharray="4 3"/>
+<text x="78" y="641.5" font-size="11.5" fill="#4B5565">점선 상자는 가상 수치의 화면 예시</text>
+<path d="M44,661 L70,661" stroke="#0F2A5F" stroke-width="2.2"/>
+<text x="78" y="665" font-size="11.5" fill="#4B5565">굵은 선은 갈래를 넘는 이동</text>
+<text x="44" y="690" font-size="11.5" fill="#4B5565">하위 화면에는 뒤로 가기가 있고,</text>
+<text x="44" y="706" font-size="11.5" fill="#4B5565">주 메뉴는 세 화면에서만 보입니다.</text>
+</svg>
