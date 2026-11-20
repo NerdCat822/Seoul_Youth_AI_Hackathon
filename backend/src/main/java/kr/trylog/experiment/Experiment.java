@@ -1,6 +1,7 @@
 package kr.trylog.experiment;
 
 import java.time.LocalDate;
+import kr.trylog.report.SalesReport;
 
 public record Experiment(
         String id,
@@ -8,5 +9,10 @@ public record Experiment(
         Category category,
         LocalDate startDate,
         LocalDate endDate,
-        String notes) {
+        String notes,
+        SalesReport report) {
+
+    public Experiment withReport(SalesReport newReport) {
+        return new Experiment(id, title, category, startDate, endDate, notes, newReport);
+    }
 }

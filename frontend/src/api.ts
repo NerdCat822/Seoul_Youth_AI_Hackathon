@@ -1,4 +1,11 @@
-import type { AppData, Experiment, ExperimentInput, NeighborhoodCase, Overview } from './types';
+import type {
+  AppData,
+  Experiment,
+  ExperimentInput,
+  NeighborhoodCase,
+  Overview,
+  SalesReport,
+} from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -9,14 +16,14 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/api/v1${path}`, {
       ...options,
       headers: {
         Accept: 'application/json',
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
       },
       signal: options.signal
         ? AbortSignal.any([options.signal, AbortSignal.timeout(10000)])
@@ -47,4 +54,18 @@ export async function loadAppData(signal?: AbortSignal): Promise<AppData> {
 
 export function createExperiment(input: ExperimentInput): Promise<Experiment> {
   return request<Experiment>('/experiments', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function getReport(id: string, signal: AbortSignal): Promise<SalesReport> {
+  return request<SalesReport>(`/experiments/${encodeURIComponent(id)}/report`, { signal });
+}
+
+export function compareSales(id: string, file: File, targetMenuCode: string): Promise<SalesReport> {
+  const body = new FormData();
+  body.append('file', file);
+  body.append('targetMenuCode', targetMenuCode);
+  return request<SalesReport>(`/experiments/${encodeURIComponent(id)}/report`, {
+    method: 'POST',
+    body,
+  });
 }

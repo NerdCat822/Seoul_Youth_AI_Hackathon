@@ -14,4 +14,5 @@ export const statuses: Record<ExperimentStatus, string> = {
   PLANNED: '시작 예정',
   IN_PROGRESS: '진행 중',
   READY: '확인할 차례',
+  COMPLETED: '결과 확인 완료',
 };

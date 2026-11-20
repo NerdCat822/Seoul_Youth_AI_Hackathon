@@ -1,6 +1,10 @@
 spring:
   application:
     name: trylog-backend
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   jackson:
     deserialization:
       fail-on-unknown-properties: true
@@ -14,4 +18,5 @@ server:
     include-stacktrace: never
 
 trylog:
+  demo-date: ${TRYLOG_DEMO_DATE:}
   store-name: ${TRYLOG_STORE_NAME:우리동네 분식}

@@ -2,7 +2,18 @@ export function Icon({
   name,
   size = 22,
 }: {
-  name: 'home' | 'calendar' | 'chart' | 'arrow' | 'back' | 'plus' | 'pin' | 'check' | 'note';
+  name:
+    | 'home'
+    | 'calendar'
+    | 'chart'
+    | 'arrow'
+    | 'back'
+    | 'plus'
+    | 'pin'
+    | 'check'
+    | 'note'
+    | 'idea'
+    | 'bell';
   size?: number;
 }) {
   const paths = {
@@ -22,6 +33,18 @@ export function Icon({
     arrow: <path d="m9 5 7 7-7 7" />,
     back: <path d="m15 5-7 7 7 7" />,
     plus: <path d="M12 5v14M5 12h14" />,
+    idea: (
+      <>
+        <path d="M8 15a7 7 0 1 1 8 0c-1 .7-1.5 1.5-1.5 3h-5c0-1.5-.5-2.3-1.5-3Z" />
+        <path d="M10 21h4" />
+      </>
+    ),
+    bell: (
+      <>
+        <path d="M5 17h14c-1.4-1.6-2-3.1-2-7a5 5 0 1 0-10 0c0 3.9-.6 5.4-2 7Z" />
+        <path d="M10 20a2.3 2.3 0 0 0 4 0" />
+      </>
+    ),
     pin: (
       <>
         <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" />

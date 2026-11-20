@@ -20,7 +20,11 @@ export function ExperimentList({ experiments }: { experiments: Experiment[] }) {
               {statuses[experiment.status]}
             </span>
             <h3>{experiment.title}</h3>
-            <p>{formatDate(experiment.checkDate)} 결과 확인 예정</p>
+            <p>
+              {experiment.status === 'COMPLETED'
+                ? '저장한 결과 보기'
+                : `${formatDate(experiment.checkDate)} 결과 확인일`}
+            </p>
           </div>
           <Icon name="arrow" size={17} />
         </a>

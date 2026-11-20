@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -30,6 +31,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidInputException.class)
     ResponseEntity<ApiError> invalidInput(InvalidInputException exception) {
         return invalid(exception.fieldErrors());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiError> uploadTooLarge(MaxUploadSizeExceededException exception) {
+        String message = "5MB 이내의 주문 파일을 선택해주세요.";
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiError("VALIDATION_ERROR", message, Map.of("file", message)));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

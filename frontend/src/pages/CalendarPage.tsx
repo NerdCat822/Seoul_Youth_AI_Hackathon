@@ -4,7 +4,15 @@ import { asDate, formatDate, formatMonth, shiftMonth } from '../lib/dates';
 import { PageHeading } from '../components/PageHeading';
 import { Icon } from '../components/Icon';
 
-export function CalendarPage({ today, experiments }: { today: string; experiments: Experiment[] }) {
+export function CalendarPage({
+  today,
+  experiments,
+  embedded = false,
+}: {
+  today: string;
+  experiments: Experiment[];
+  embedded?: boolean;
+}) {
   const [month, setMonth] = useState(today.slice(0, 7));
   const [selected, setSelected] = useState(today);
   const firstDay = asDate(`${month}-01`).getUTCDay();
@@ -23,9 +31,9 @@ export function CalendarPage({ today, experiments }: { today: string; experiment
   }
   return (
     <>
-      <PageHeading eyebrow="잊지 않도록 한곳에" title="우리 가게 달력">
-        시작한 날과 다시 살펴볼 날을 확인해요.
-      </PageHeading>
+      {!embedded && (
+        <PageHeading title="우리 가게 달력">시작한 날과 다시 살펴볼 날을 확인해요.</PageHeading>
+      )}
       <div className="calendar-panel">
         <div className="month-header">
           <h2>{formatMonth(month)}</h2>
@@ -125,9 +133,11 @@ export function CalendarPage({ today, experiments }: { today: string; experiment
           </div>
         )}
       </section>
-      <a className="button secondary" href="#/new">
-        <Icon name="plus" size={18} /> 새로운 시도 남기기
-      </a>
+      {!embedded && (
+        <a className="button secondary" href="#/new">
+          <Icon name="plus" size={18} /> 새로운 시도 남기기
+        </a>
+      )}
     </>
   );
 }

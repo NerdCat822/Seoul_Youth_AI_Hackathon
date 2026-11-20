@@ -44,7 +44,7 @@ public class ExperimentService {
             throw new InvalidInputException(errors);
         }
         Experiment experiment = new Experiment(UUID.randomUUID().toString(), request.title(),
-                request.category(), request.startDate(), request.endDate(), request.notes());
+                request.category(), request.startDate(), request.endDate(), request.notes(), null);
         return response(repository.save(experiment));
     }
 

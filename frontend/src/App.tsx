@@ -8,6 +8,8 @@ import { RecordsPage } from './pages/RecordsPage';
 import { CaseDetailPage, CasesPage } from './pages/CasesPage';
 import { ExperimentDetailPage, ExperimentFormPage } from './pages/ExperimentPage';
 import { SamplePage } from './pages/SamplePage';
+import { ReportPage, UploadPage } from './pages/ReportPage';
+import { ForecastPage } from './pages/ForecastPage';
 
 function useRoute() {
   const [route, setRoute] = useState(window.location.hash.slice(1) || '/');
@@ -27,6 +29,7 @@ export function App() {
   const [attempt, setAttempt] = useState(0);
   const [notice, setNotice] = useState('');
   const mainRef = useRef<HTMLElement>(null);
+  const [showAlerts, setShowAlerts] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     setError('');
@@ -42,6 +45,7 @@ export function App() {
   }, [attempt]);
   useEffect(() => {
     window.scrollTo(0, 0);
+    setShowAlerts(false);
     mainRef.current?.focus({ preventScroll: true });
   }, [route]);
   useEffect(() => {
@@ -49,15 +53,20 @@ export function App() {
     const timer = window.setTimeout(() => setNotice(''), 5000);
     return () => window.clearTimeout(timer);
   }, [notice]);
-  const activeTab =
-    pathname === '/calendar'
-      ? 'calendar'
-      : pathname === '/records' ||
-          pathname.startsWith('/cases') ||
-          pathname.startsWith('/experiments') ||
-          pathname === '/sample'
-        ? 'records'
-        : 'home';
+  const activeTab = pathname.startsWith('/cases')
+    ? 'ideas'
+    : ['/', '/forecast'].includes(pathname)
+      ? 'home'
+      : 'records';
+  const due = data?.experiments.filter((item) => item.status === 'READY') ?? [];
+  const experimentId = pathname.split('/')[2];
+  const backPath = pathname.startsWith('/cases/')
+    ? '/cases'
+    : pathname === '/forecast'
+      ? '/'
+      : pathname.endsWith('/report') || pathname.endsWith('/upload')
+        ? `/experiments/${experimentId}`
+        : '/records';
   const isMain = ['/', '/calendar', '/records', '/cases'].includes(pathname);
   function created(experiment: Experiment) {
     setData(
@@ -65,6 +74,17 @@ export function App() {
     );
     setNotice('시도를 저장했어요. 달력에도 함께 표시했어요.');
     window.location.hash = `/experiments/${encodeURIComponent(experiment.id)}`;
+  }
+  function compared(id: string) {
+    setData(
+      (current) =>
+        current && {
+          ...current,
+          experiments: current.experiments.map((item) =>
+            item.id === id ? { ...item, status: 'COMPLETED' } : item,
+          ),
+        },
+    );
   }
   let page;
   if (!data)
@@ -86,6 +106,7 @@ export function App() {
       </div>
     );
   else if (pathname === '/') page = <HomePage data={data} />;
+  else if (pathname === '/forecast') page = <ForecastPage />;
   else if (pathname === '/calendar')
     page = <CalendarPage today={data.overview.today} experiments={data.experiments} />;
   else if (pathname === '/records') page = <RecordsPage experiments={data.experiments} />;
@@ -97,6 +118,8 @@ export function App() {
         key={route}
         today={data.overview.today}
         seed={data.cases.find((item) => item.id === params.get('case'))}
+        draft={params.get('text') ?? undefined}
+        previous={data.experiments.find((item) => item.id === params.get('from'))}
         onCreated={created}
       />
     );
@@ -105,10 +128,23 @@ export function App() {
     const item = data.cases.find((item) => `/cases/${encodeURIComponent(item.id)}` === pathname);
     page = item ? <CaseDetailPage item={item} /> : <NotFound />;
   } else if (pathname.startsWith('/experiments/')) {
-    const item = data.experiments.find(
-      (item) => `/experiments/${encodeURIComponent(item.id)}` === pathname,
-    );
-    page = item ? <ExperimentDetailPage experiment={item} /> : <NotFound />;
+    const item = data.experiments.find((item) => encodeURIComponent(item.id) === experimentId);
+    if (!item) page = <NotFound />;
+    else if (pathname === `/experiments/${experimentId}`)
+      page = <ExperimentDetailPage experiment={item} />;
+    else if (
+      pathname === `/experiments/${experimentId}/upload` &&
+      ['READY', 'COMPLETED'].includes(item.status)
+    )
+      page = <UploadPage key={item.id} experiment={item} onCompared={compared} />;
+    else if (pathname === `/experiments/${experimentId}/report` && item.status === 'COMPLETED')
+      page = <ReportPage key={item.id} experiment={item} />;
+    else if (
+      pathname === `/experiments/${experimentId}/report` ||
+      pathname === `/experiments/${experimentId}/upload`
+    )
+      page = <ExperimentDetailPage experiment={item} />;
+    else page = <NotFound />;
   } else page = <NotFound />;
   return (
     <div className="workspace">
@@ -126,11 +162,7 @@ export function App() {
         <header className="app-header">
           <div className="header-leading">
             {!isMain && (
-              <a
-                className="icon-button back-link"
-                href={pathname.startsWith('/cases/') ? '#/cases' : '#/records'}
-                aria-label={pathname.startsWith('/cases/') ? '사례 목록으로' : '장사 기록으로'}
-              >
+              <a className="icon-button back-link" href={`#${backPath}`} aria-label="이전 단계로">
                 <Icon name="back" size={20} />
               </a>
             )}
@@ -139,24 +171,61 @@ export function App() {
               <span className="brand-dot" />
             </a>
           </div>
-          <span className="store-chip">
-            <Icon name="pin" size={14} />
-            {data?.overview.storeName ?? '우리 가게'}
-          </span>
+          <div className="header-tools">
+            <div className="notification">
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="알림"
+                aria-expanded={showAlerts}
+                onClick={() => setShowAlerts(!showAlerts)}
+              >
+                <Icon name="bell" />
+                {due.length > 0 && <i />}
+              </button>
+              {showAlerts && (
+                <section className="alert-panel">
+                  <h2>알림</h2>
+                  {due.length ? (
+                    due.map((item) => (
+                      <a key={item.id} href={`#/experiments/${item.id}/upload`}>
+                        {item.title}
+                        <small>판매 자료를 올릴 차례예요.</small>
+                      </a>
+                    ))
+                  ) : (
+                    <p>지금 확인할 결과가 없어요.</p>
+                  )}
+                </section>
+              )}
+            </div>
+            <span className="store-chip">
+              <Icon name="pin" size={14} />
+              {data?.overview.storeName ?? '우리 가게'}
+            </span>
+          </div>
         </header>
-        <main id="main-content" className="screen" ref={mainRef} tabIndex={-1}>
+        <main
+          id="main-content"
+          className={`screen ${pathname === '/' ? 'home-screen' : ''}`}
+          ref={mainRef}
+          tabIndex={-1}
+        >
           {page}
         </main>
         <footer className="storage-note">
           <span className="dev-dot" />
           개발 버전 · 서버 재시작 시 기록이 초기화돼요.
         </footer>
-        <nav className="app-nav" aria-label="주 메뉴">
+        <nav className={`app-nav ${isMain ? '' : 'detail-navigation'}`} aria-label="주 메뉴">
+          <a className="side-brand" href="#/" aria-label="트라이로그 홈">
+            <i aria-hidden="true">✓</i>Trylog
+          </a>
           {(
             [
               { id: 'home', path: '/', label: '홈', icon: 'home' },
-              { id: 'calendar', path: '/calendar', label: '달력', icon: 'calendar' },
-              { id: 'records', path: '/records', label: '장사 기록', icon: 'chart' },
+              { id: 'ideas', path: '/cases', label: '아이디어', icon: 'idea' },
+              { id: 'records', path: '/records', label: '내 기록', icon: 'note' },
             ] as const
           ).map((tab) => (
             <a
@@ -173,9 +242,6 @@ export function App() {
           {notice}
         </div>
       </div>
-      <p className="desktop-caption">
-        트라이로그 <span>작은 시도를, 더 나은 내일로.</span>
-      </p>
     </div>
   );
 }

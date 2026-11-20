@@ -6,14 +6,12 @@ import { Icon } from '../components/Icon';
 export function RecordsPage({ experiments }: { experiments: Experiment[] }) {
   return (
     <>
-      <PageHeading eyebrow="한 번의 시도도 소중하게" title="장사 기록">
-        내가 해본 일을 차곡차곡 모아봐요.
-      </PageHeading>
+      <PageHeading title="내 기록">내가 해본 일을 차곡차곡 모아봐요.</PageHeading>
       <div className="view-tabs">
         <a href="#/records" aria-current="page">
           내 가게
         </a>
-        <a href="#/cases">동네 가게</a>
+        <a href="#/calendar">달력으로 보기</a>
       </div>
       <div className="summary-tiles">
         <div>

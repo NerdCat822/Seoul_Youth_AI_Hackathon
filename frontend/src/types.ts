@@ -1,6 +1,24 @@
 export type Category = 'MENU' | 'OPERATION' | 'MARKETING';
 export type Difficulty = 'EASY' | 'PREPARE' | 'PLAN';
-export type ExperimentStatus = 'PLANNED' | 'IN_PROGRESS' | 'READY';
+export type ExperimentStatus = 'PLANNED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED';
+
+export interface ReportPeriod {
+  startDate: string;
+  endDate: string;
+  targetOrders: number;
+  totalOrders: number;
+  sharePct: number;
+  sales: number;
+}
+
+export interface SalesReport {
+  targetMenuCode: string;
+  before: ReportPeriod;
+  after: ReportPeriod;
+  shareDeltaPp: number;
+  excludedRefundLines: number;
+  summary: string;
+}
 
 export interface Overview {
   storeName: string;

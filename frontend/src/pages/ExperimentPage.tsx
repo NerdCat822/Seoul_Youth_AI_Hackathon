@@ -6,23 +6,32 @@ import { addDays, formatDate } from '../lib/dates';
 import { categories, statuses } from '../lib/labels';
 import { PageHeading } from '../components/PageHeading';
 import { Icon } from '../components/Icon';
+import { parseDraft } from '../lib/draft';
 
 export function ExperimentFormPage({
   today,
   seed,
+  draft,
+  previous,
   onCreated,
 }: {
   today: string;
   seed?: NeighborhoodCase;
+  draft?: string;
+  previous?: Experiment;
   onCreated: (experiment: Experiment) => void;
 }) {
-  const [form, setForm] = useState<ExperimentInput>({
-    title: seed?.title ?? '',
-    category: seed?.category ?? 'MENU',
-    startDate: today,
-    endDate: addDays(today, (seed?.durationDays ?? 14) - 1),
-    notes: '',
-  });
+  const [form, setForm] = useState<ExperimentInput>(() =>
+    draft
+      ? parseDraft(draft, today)
+      : {
+          title: seed?.title ?? previous?.title ?? '',
+          category: seed?.category ?? previous?.category ?? 'MENU',
+          startDate: today,
+          endDate: addDays(today, (seed?.durationDays ?? 14) - 1),
+          notes: previous ? `지난 시도 ‘${previous.title}’에서 이어가는 기록` : '',
+        },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
@@ -68,8 +77,10 @@ export function ExperimentFormPage({
   }
   return (
     <>
-      <PageHeading eyebrow="작은 변화를 남기는 첫걸음" title="어떤 일을 해볼까요?">
-        해볼 일과 기간을 적으면 달력에 함께 남겨둘게요.
+      <PageHeading title={previous ? '다음 시도 남기기' : '새 기록'}>
+        {previous
+          ? '지난 시도에서 한 가지만 바꿔보세요. 제목과 기간을 수정한 뒤 저장할 수 있어요.'
+          : '가게에서 바꾼 일과 기간을 확인해주세요.'}
       </PageHeading>
       <form className="experiment-form" onSubmit={submit} ref={formRef} noValidate>
         <div className="form-field">
@@ -142,6 +153,20 @@ export function ExperimentFormPage({
             <FieldError id="endDate-error" message={errors.endDate} />
           </div>
         </fieldset>
+        <button
+          className="text-action period-preset"
+          type="button"
+          onClick={() => {
+            setForm((current) => ({
+              ...current,
+              startDate: addDays(today, -14),
+              endDate: addDays(today, -1),
+            }));
+            setErrors((current) => ({ ...current, startDate: '', endDate: '' }));
+          }}
+        >
+          어제로 끝난 최근 14일로 설정
+        </button>
         {form.endDate && form.endDate >= form.startDate && form.endDate <= '2100-12-31' && (
           <p className="check-hint">
             <Icon name="calendar" size={18} />
@@ -227,16 +252,31 @@ export function ExperimentDetailPage({ experiment }: { experiment: Experiment })
       <section className="tip-card">
         <Icon name="calendar" />
         <h2>
-          {experiment.status === 'READY'
-            ? '이제 시도를 돌아볼 차례예요'
-            : '확인할 날을 달력에 표시했어요'}
+          {experiment.status === 'COMPLETED'
+            ? '결과를 저장했어요'
+            : experiment.status === 'READY'
+              ? '이제 시도를 돌아볼 차례예요'
+              : '확인할 날을 달력에 표시했어요'}
         </h2>
         <p>
-          판매 자료를 연결해 결과를 비교하는 기능은 준비 중이에요. 지금은 시도와 일정을 기록할 수
-          있어요.
+          {experiment.status === 'COMPLETED'
+            ? '판매 자료에서 확인한 전후 주문 수와 비중을 다시 볼 수 있어요.'
+            : experiment.status === 'READY'
+              ? '두 기간의 주문이 담긴 판매 자료를 준비해주세요. 비교할 수 있는 예시 파일도 있어요.'
+              : `${formatDate(experiment.checkDate)}부터 판매 자료를 올려 전후 결과를 비교할 수 있어요.`}
         </p>
       </section>
-      <a className="button" href="#/calendar">
+      {experiment.status === 'READY' && (
+        <a className="button" href={`#/experiments/${experiment.id}/upload`}>
+          판매 자료 올리기
+        </a>
+      )}
+      {experiment.status === 'COMPLETED' && (
+        <a className="button" href={`#/experiments/${experiment.id}/report`}>
+          저장된 결과 보기
+        </a>
+      )}
+      <a className="button secondary spaced" href="#/calendar">
         달력에서 일정 보기
       </a>
       <a className="button secondary spaced" href="#/records">
