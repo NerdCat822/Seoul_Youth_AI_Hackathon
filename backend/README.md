@@ -107,7 +107,9 @@ npm run dev
 | GET | `/experiments/{id}/report`, `/experiments/{id}/sample.csv` | 영구 보고서 조회(현 DDL에서는 404), 현재 가게·기간에 맞춘 합성 CSV |
 | GET | `/demo/forecast` | 가게별 유효 일매출에서 가장 최근 영업일 다음 날부터 7일. 완전한 저장 예측 회차 또는 4주 같은 요일 평균. 이력 부족은 `INSUFFICIENT_DATA`와 누락 날짜 |
 | GET | `/forecast/week` | 서비스 기준 내일부터 7일간의 가게별 예상 매출(원). 같은 회차의 7일 저장 예측을 우선하고, 없으면 날짜별로 최근 4주 같은 요일의 매출을 평균한다. 필요한 영업일이 빠진 날짜의 `expected`는 `null`이다. |
+| GET | `/sales/daily?from=YYYY-MM-DD&to=YYYY-MM-DD` | 로그인한 가게의 날짜별 POS 실매출을 `[{date, actual}]`로 반환한다. 양 끝 날짜를 포함해 최대 366일을 조회할 수 있으며, 실적은 서비스 기준 오늘까지 집계한다. 전액 환불된 날은 0원이며 주문이 없거나 환불 여부를 전혀 알 수 없는 날은 생략한다. |
 | GET | `/weather/week` | 같은 7일 중 `external_daily_features`에 예보로 저장한 날짜의 평균기온(°C)과 강수량(mm). 날짜별 공통 자료로, 가게별 관측소 구분은 없다. |
+| GET | `/weather/daily?from=YYYY-MM-DD&to=YYYY-MM-DD` | 주간·월간 달력에 보이는 기간(최대 42일)의 평균기온과 강수량. 과거는 실측, 미래는 예보, 당일은 저장된 자료를 반환한다. `forecast`는 예보 여부다. |
 | GET | `/cases` | 가상으로 구성한 동네 사례 6개 |
 | GET | `/chats`, `/chats/{id}` | 선택 가게의 저장된 대화 목록(최근 대화순), 대화 한 건의 메시지(말한 순서). 다른 가게의 ID는 404 |
 

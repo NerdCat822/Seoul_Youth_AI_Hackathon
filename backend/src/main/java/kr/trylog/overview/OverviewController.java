@@ -2,14 +2,18 @@ package kr.trylog.overview;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import kr.trylog.shared.InvalidInputException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -87,5 +91,18 @@ public class OverviewController {
     @Transactional(readOnly = true)
     public List<StoreRepository.Menu> menus() {
         return stores.menus();
+    }
+
+    @GetMapping("/sales/daily")
+    @Transactional(readOnly = true)
+    public List<StoreRepository.DailySale> dailySales(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        if (to.isBefore(from) || ChronoUnit.DAYS.between(from, to) >= 366) {
+            throw new InvalidInputException(Map.of("to", "시작일부터 최대 366일 이내의 종료일을 선택해주세요."));
+        }
+        LocalDate today = LocalDate.now(clock);
+        if (from.isAfter(today)) return List.of();
+        return stores.dailySales(from, to.isAfter(today) ? today : to);
     }
 }

@@ -1,8 +1,9 @@
-import { request } from '../api';
 import { addDays, asDate, formatDate, formatMonth, shiftMonth } from '../lib/dates';
 import type { AppData } from '../types';
-import { loadWeekSales, upcomingDates, weatherLabel, type DailyWeather } from './home-week';
+import { loadActualSales } from './daily-sales';
+import { loadWeekSales, upcomingDates } from './home-week';
 import { daysBetween, el, recordDestination, ui } from './record-ui';
+import { loadWeather, weatherIcon, weatherTitle, type DailyWeather } from './weather';
 
 const colors = ['#155dfc', '#00a2b8', '#8e51ff', '#e17100', '#00a63e', '#6a7282'];
 const won = new Intl.NumberFormat('ko-KR');
@@ -22,6 +23,9 @@ export function mountCalendar(data: AppData, signal: AbortSignal) {
   scroller.after(agenda);
   const weather = new Map<string, DailyWeather>();
   const forecasts = new Map<string, number | null>();
+  let actuals: Map<string, number> | undefined;
+  let actualsFailed = false;
+  let monthRequest: AbortController | undefined;
   el('[data-weekdays]').innerHTML = [...'일월화수목금토']
     .map((d) => `<span class="px-3 py-3">${d}</span>`)
     .join('');
@@ -29,14 +33,13 @@ export function mountCalendar(data: AppData, signal: AbortSignal) {
   function showReadings() {
     for (const cell of grid.querySelectorAll<HTMLElement>('[data-weather-date]')) {
       const day = weather.get(cell.dataset.weatherDate!);
-      const label = weatherLabel(day);
-      cell.title = label.replaceAll('\n', ', ');
-      cell.setAttribute('aria-label', label);
-      cell.innerHTML = '';
+      const label = weatherTitle(day);
+      cell.title = label;
+      if (label) cell.setAttribute('aria-label', label);
+      else cell.removeAttribute('aria-label');
+      cell.innerHTML = weatherIcon(day);
       if (day && label) {
-        if (day.precipitationMm != null && day.precipitationMm > 0)
-          cell.innerHTML = icon('rain', 16);
-        if (day.averageTempC != null)
+        if (day.averageTempC != null && Number.isFinite(day.averageTempC))
           cell.append(
             document.createTextNode(
               `${day.averageTempC.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}°`,
@@ -47,12 +50,20 @@ export function mountCalendar(data: AppData, signal: AbortSignal) {
       }
     }
     for (const cell of grid.querySelectorAll<HTMLElement>('[data-sales-date]')) {
-      const value = forecasts.get(cell.dataset.salesDate!);
-      cell.innerHTML =
-        value == null
-          ? '<span class="text-muted">—</span>'
-          : `<span class="text-sub">예상</span><span class="font-semibold text-brand-strong">${won.format(value)}원</span>`;
-      cell.title = value == null ? '일별 매출 자료 없음' : '예상 매출 ' + won.format(value) + '원';
+      const date = cell.dataset.salesDate!;
+      const historical = date <= today;
+      const value = historical ? actuals?.get(date) : forecasts.get(date);
+      const label = historical ? '매출' : '예상 매출';
+      if (value != null) {
+        cell.innerHTML = `<span class="text-sub">${label}</span><span class="font-semibold text-brand-strong">${won.format(value)}원</span>`;
+        cell.title = label + ' ' + won.format(value) + '원';
+      } else {
+        let status = label + ' 자료 없음';
+        if (historical && actualsFailed) status = '매출 조회 실패';
+        else if (historical && !actuals) status = '매출 조회 중';
+        cell.innerHTML = `<span class="text-muted">${historical && !actuals ? status : '—'}</span>`;
+        cell.title = status;
+      }
     }
   }
 
@@ -87,7 +98,7 @@ export function mountCalendar(data: AppData, signal: AbortSignal) {
             i,
           ) => `<div class="flex items-center justify-between px-3 pt-2.5 ${cellClass(date, i)}">
         <time datetime="${date}" aria-label="${esc(formatDate(date, true))}" ${date === today ? 'aria-current="date"' : ''} class="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full px-1 text-[13px] font-medium ${date === today ? 'bg-brand font-semibold text-white' : date.startsWith(month) ? 'text-body' : 'text-muted'}">${Number(date.slice(-2))}</time>
-        <span class="inline-flex items-center text-[13px] text-sub" data-weather-date="${date}"></span></div>`,
+        <span class="inline-flex items-center gap-1 text-[13px] text-sub" data-weather-date="${date}"></span></div>`,
         )
         .join('');
       const lanes: string[] = [];
@@ -119,7 +130,36 @@ export function mountCalendar(data: AppData, signal: AbortSignal) {
         <div class="grid grid-cols-7 border-t border-dashed border-line-light">${foot}</div></div>`);
     }
     grid.innerHTML = sections.join('');
+    monthRequest?.abort();
+    monthRequest = new AbortController();
+    const requestSignal = AbortSignal.any([signal, monthRequest.signal]);
+    const end = addDays(start, weeks * 7 - 1);
+    actuals = undefined;
+    actualsFailed = false;
+    weather.clear();
     showReadings();
+    if (start <= today) {
+      void loadActualSales(start, end < today ? end : today, requestSignal)
+        .then((rows) => {
+          if (requestSignal.aborted) return;
+          actuals = rows;
+          showReadings();
+        })
+        .catch(() => {
+          if (requestSignal.aborted) return;
+          actualsFailed = true;
+          showReadings();
+        });
+    }
+    void loadWeather(start, end, requestSignal)
+      .then((rows) => {
+        if (requestSignal.aborted) return;
+        for (const row of rows) weather.set(row.date, row);
+        showReadings();
+      })
+      .catch(() => {
+        // Weather is optional. Sales and records can still be shown for this month.
+      });
     const items = data.experiments.filter(
       (r) =>
         (r.startDate <= last && r.endDate >= first) ||
@@ -137,14 +177,11 @@ export function mountCalendar(data: AppData, signal: AbortSignal) {
     render();
   };
   render();
-  void Promise.allSettled([
-    loadWeekSales(upcomingDates(today), signal),
-    request<DailyWeather[]>('/weather/week', { signal }),
-  ]).then(([sales, forecast]) => {
-    if (signal.aborted) return;
-    if (sales.status === 'fulfilled')
-      for (const d of sales.value) forecasts.set(d.date, d.expected);
-    if (forecast.status === 'fulfilled') for (const d of forecast.value) weather.set(d.date, d);
-    showReadings();
-  });
+  void loadWeekSales(upcomingDates(today), signal)
+    .then((rows) => {
+      if (signal.aborted) return;
+      for (const row of rows) forecasts.set(row.date, row.expected);
+      showReadings();
+    })
+    .catch(() => {});
 }

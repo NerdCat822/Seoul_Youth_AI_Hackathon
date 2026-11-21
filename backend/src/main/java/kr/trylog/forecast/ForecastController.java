@@ -2,17 +2,22 @@ package kr.trylog.forecast;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import kr.trylog.overview.StoreRepository;
+import kr.trylog.shared.InvalidInputException;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class ForecastController {
     public record UpcomingSales(LocalDate date, Long expected) {}
-    public record WeatherDay(LocalDate date, Double averageTempC, Double precipitationMm) {}
+    public record WeatherDay(LocalDate date, Double averageTempC, Double precipitationMm, boolean forecast) {}
 
     private final StoreRepository stores;
     private final ForecastRepository repository;
@@ -46,7 +51,19 @@ public class ForecastController {
     @Transactional(readOnly = true)
     public List<WeatherDay> upcomingWeather() {
         LocalDate today = LocalDate.now(clock);
-        return repository.weather(today.plusDays(1), today.plusDays(7));
+        return repository.weather(today.plusDays(1), today.plusDays(7), today);
+    }
+
+    @GetMapping("/api/v1/weather/daily")
+    @Transactional(readOnly = true)
+    public List<WeatherDay> dailyWeather(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        long days = ChronoUnit.DAYS.between(from, to);
+        if (days < 0 || days >= 42) {
+            throw new InvalidInputException(Map.of("to", "달력 조회 기간은 1일에서 42일까지예요."));
+        }
+        return repository.weather(from, to, LocalDate.now(clock));
     }
 
     @GetMapping("/api/v1/demo/forecast")

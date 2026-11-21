@@ -33,15 +33,17 @@ public class ForecastRepository {
         return history;
     }
 
-    List<ForecastController.WeatherDay> weather(LocalDate first, LocalDate last) {
+    List<ForecastController.WeatherDay> weather(LocalDate first, LocalDate last, LocalDate today) {
         return jdbc.query("""
-                SELECT feature_date, avg_temp, precipitation
+                SELECT feature_date, avg_temp, precipitation, is_forecast
                 FROM seoul_youth_ai_hackathon.external_daily_features
-                WHERE feature_date BETWEEN ? AND ? AND is_forecast IS TRUE
+                WHERE feature_date BETWEEN ? AND ?
+                  AND ((feature_date <= ? AND is_forecast IS FALSE)
+                    OR (feature_date >= ? AND is_forecast IS TRUE))
                 ORDER BY feature_date
                 """, (rs, row) -> new ForecastController.WeatherDay(
                 rs.getObject("feature_date", LocalDate.class), rs.getObject("avg_temp", Double.class),
-                rs.getObject("precipitation", Double.class)), first, last);
+                rs.getObject("precipitation", Double.class), rs.getBoolean("is_forecast")), first, last, today, today);
     }
 
     List<StoredDay> predictions(int store, LocalDate through) {

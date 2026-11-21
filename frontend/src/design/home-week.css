@@ -26,8 +26,7 @@
   margin-inline-start: auto;
   gap: 4px;
 }
-.week-arrows[hidden],
-.week-tools a[hidden] {
+.week-arrows[hidden] {
   display: none;
 }
 .week-arrows button {

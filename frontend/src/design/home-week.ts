@@ -1,32 +1,20 @@
 import { request } from '../api';
 import { addDays, asDate, formatDate } from '../lib/dates';
 import type { AppData, Experiment } from '../types';
+import { loadActualSales } from './daily-sales';
 import { daysBetween, recordUrl } from './record-ui';
+import { loadWeather, weatherIcon, weatherLabel, weatherTitle, type DailyWeather } from './weather';
 import './home-week.css';
 
 interface DailySales {
   date: string;
   expected: number | null;
 }
-export interface DailyWeather {
-  date: string;
-  averageTempC: number | null;
-  precipitationMm: number | null;
-}
 const amount = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1 });
 const weekday = new Intl.DateTimeFormat('ko-KR', { weekday: 'short', timeZone: 'UTC' });
 
 export function upcomingDates(today: string) {
   return Array.from({ length: 7 }, (_, index) => addDays(today, index + 1));
-}
-
-export function weatherLabel(day?: DailyWeather) {
-  const parts = [];
-  if (day?.averageTempC != null && Number.isFinite(day.averageTempC))
-    parts.push('평균 ' + amount.format(day.averageTempC) + '°C');
-  if (day?.precipitationMm != null && Number.isFinite(day.precipitationMm))
-    parts.push('강수 ' + amount.format(day.precipitationMm) + 'mm');
-  return parts.join('\n');
 }
 
 export async function loadWeekSales(dates: string[], signal: AbortSignal): Promise<DailySales[]> {
@@ -115,10 +103,12 @@ export function mountHomeWeek(section: HTMLElement, data: AppData, signal: Abort
   const upcoming = upcomingDates(today);
   const sunday = addDays(today, -asDate(today).getUTCDay());
   const current = Array.from({ length: 7 }, (_, i) => addDays(sunday, i));
-  let dates = upcoming;
-  let sales: Map<string, number | null> | undefined, weather: Map<string, DailyWeather> | undefined;
-  let salesFailed = false,
-    weatherFailed = false;
+  let dates = current;
+  type SalesState = Map<string, number | null> | 'loading' | 'failed';
+  let actualSales: SalesState = 'loading';
+  let forecastSales: SalesState | undefined;
+  let weather: Map<string, DailyWeather> | undefined;
+  let weatherFailed = false;
   section.dataset.weekSummary = '';
   section.classList.add('week-summary');
   const heading = section.querySelector<HTMLElement>('#h-week')!;
@@ -141,12 +131,12 @@ export function mountHomeWeek(section: HTMLElement, data: AppData, signal: Abort
   const scroller = document.createElement('div');
   scroller.className = 'week-scroll';
   scroller.setAttribute('role', 'region');
-  scroller.setAttribute('aria-label', '날짜별 예상 매출, 날씨와 할 일');
+  scroller.setAttribute('aria-label', '날짜별 매출, 날씨와 할 일');
   grid.before(scroller);
   scroller.append(grid);
   const toolbar = document.createElement('div');
   toolbar.className = 'week-tools';
-  toolbar.innerHTML = `<p data-week-total></p><a class="more-link" href="forecast.html?week=upcoming">매출 전망 보기 ${icon('chevron-right', 16)}</a>
+  toolbar.innerHTML = `<p data-week-total></p>
     <div class="week-arrows" hidden><button class="icon-btn" type="button" aria-label="이전 날짜" aria-controls="week-days">${icon('chevron-left', 16)}</button><button class="icon-btn" type="button" aria-label="다음 날짜" aria-controls="week-days">${icon('chevron-right', 16)}</button></div>`;
   scroller.before(toolbar);
   const total = toolbar.querySelector<HTMLElement>('[data-week-total]')!;
@@ -174,41 +164,46 @@ export function mountHomeWeek(section: HTMLElement, data: AppData, signal: Abort
   signal.addEventListener('abort', () => observer.disconnect(), { once: true });
 
   function readings() {
+    const isCurrent = dates === current;
+    const sales = isCurrent ? actualSales : forecastSales;
     let sum = 0,
       count = 0;
     for (const cell of head.querySelectorAll<HTMLElement>('[data-week-date]')) {
       const date = cell.dataset.weekDate!;
-      const value = sales?.get(date);
+      const value = sales instanceof Map ? sales.get(date) : undefined;
       const target = cell.querySelector<HTMLElement>('[data-week-sales]')!;
       target.classList.toggle('week-amount', value != null);
       if (value != null) {
         sum += value;
         count++;
       }
-      target.textContent =
-        value != null
-          ? amount.format(value) + '원'
-          : salesFailed
-            ? '조회 실패'
-            : sales
-              ? '예측 자료 없음'
-              : '조회 중';
+      if (value != null) target.textContent = amount.format(value) + '원';
+      else if (isCurrent && date > today) target.textContent = '집계 전';
+      else if (sales === 'failed') target.textContent = '조회 실패';
+      else if (sales instanceof Map)
+        target.textContent = isCurrent ? '매출 자료 없음' : '예측 자료 없음';
+      else target.textContent = '조회 중';
       const day = weather?.get(date);
       const label = weatherLabel(day);
       const wx = cell.querySelector<HTMLElement>('[data-week-weather]')!;
       wx.textContent =
-        label || (weatherFailed ? '조회 실패' : weather ? '예보 자료 없음' : '조회 중');
-      cell.querySelector<HTMLElement>('[data-weather-icon]')!.innerHTML =
-        day?.precipitationMm != null && day.precipitationMm > 0 ? icon('rain', 16) : '';
+        label || (weatherFailed ? '조회 실패' : weather ? '날씨 자료 없음' : '조회 중');
+      wx.title = weatherTitle(day);
+      const weatherMark = cell.querySelector<HTMLElement>('[data-weather-icon]')!;
+      weatherMark.innerHTML = weatherIcon(day);
+      weatherMark.title = wx.title;
     }
-    total.innerHTML =
-      count === 7 ? `7일 예상 매출 합계 <strong>${amount.format(sum)}원</strong>` : '';
+    if (isCurrent && count > 0) {
+      total.innerHTML = `이번 주 매출 · ${count}일 집계 <strong>${amount.format(sum)}원</strong>`;
+    } else {
+      total.innerHTML =
+        count === 7 ? `7일 예상 매출 합계 <strong>${amount.format(sum)}원</strong>` : '';
+    }
   }
   function render() {
     heading.textContent = dates === upcoming ? '다음 7일' : '이번 주';
     switcher.textContent = dates === upcoming ? '이번 주 보기' : '다음 7일 보기';
     range.textContent = formatDate(dates[0], true) + ' ~ ' + formatDate(dates[6], true);
-    toolbar.querySelector('a')!.hidden = dates !== upcoming;
     columns.innerHTML = dates
       .map(
         (date, i) =>
@@ -220,7 +215,7 @@ export function mountHomeWeek(section: HTMLElement, data: AppData, signal: Abort
         const value = asDate(date);
         return `<div class="week-day" data-week-date="${date}"><div class="flex items-center justify-between">
         <time datetime="${date}" aria-label="${formatDate(date, true)}" ${date === today ? 'aria-current="date"' : ''}><b>${value.getUTCDate()}</b> ${weekday.format(value)}</time><span class="text-dim" aria-hidden="true" data-weather-icon></span></div>
-        <dl><dt>예상 매출</dt><dd data-week-sales></dd><dt>날씨</dt><dd data-week-weather></dd><dt class="sr-only">할 일</dt><dd class="week-tasks" data-week-tasks>${dayTasks(date, data.experiments)}</dd></dl></div>`;
+        <dl><dt>${dates === current ? '매출' : '예상 매출'}</dt><dd data-week-sales></dd><dt>날씨</dt><dd data-week-weather></dd><dt class="sr-only">할 일</dt><dd class="week-tasks" data-week-tasks>${dayTasks(date, data.experiments)}</dd></dl></div>`;
       })
       .join('');
     lanes.innerHTML = weekLanes(data.experiments, dates);
@@ -229,23 +224,37 @@ export function mountHomeWeek(section: HTMLElement, data: AppData, signal: Abort
   }
   switcher.onclick = () => {
     dates = dates === upcoming ? current : upcoming;
+    if (dates === upcoming && (forecastSales === undefined || forecastSales === 'failed')) {
+      forecastSales = 'loading';
+      void loadWeekSales(upcoming, signal)
+        .then((rows) => {
+          if (signal.aborted) return;
+          forecastSales = new Map(rows.map((row) => [row.date, row.expected]));
+          readings();
+        })
+        .catch(() => {
+          if (signal.aborted) return;
+          forecastSales = 'failed';
+          readings();
+        });
+    }
     scroller.scrollLeft = 0;
     render();
   };
   render();
-  void loadWeekSales(upcoming, signal)
+  void loadActualSales(current[0], today, signal)
     .then((rows) => {
       if (signal.aborted) return;
-      sales = new Map(rows.map((row) => [row.date, row.expected]));
+      actualSales = rows;
       readings();
     })
     .catch(() => {
       if (!signal.aborted) {
-        salesFailed = true;
+        actualSales = 'failed';
         readings();
       }
     });
-  void request<DailyWeather[]>('/weather/week', { signal })
+  void loadWeather(current[0], upcoming[6], signal)
     .then((rows) => {
       if (signal.aborted) return;
       weather = new Map(rows.map((row) => [row.date, row]));

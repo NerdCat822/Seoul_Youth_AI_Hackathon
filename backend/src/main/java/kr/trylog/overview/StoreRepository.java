@@ -1,5 +1,6 @@
 package kr.trylog.overview;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import kr.trylog.auth.StorePrincipal;
@@ -22,6 +23,7 @@ public class StoreRepository {
     public record Menu(String menuCode, String menuName, int unitPrice) { }
     public record Upjong(String upjongCd, String upjongNm) { }
     public record StoreInfo(int storeId, String storeName, String upjongCd, String upjongNm) { }
+    public record DailySale(LocalDate date, long actual) { }
 
     public List<Upjong> upjongs() {
         return jdbc.query("""
@@ -41,6 +43,17 @@ public class StoreRepository {
 
     public int storeId() {
         return StorePrincipal.require().storeId();
+    }
+
+    public List<DailySale> dailySales(LocalDate from, LocalDate to) {
+        return jdbc.query("""
+                SELECT base_date, COALESCE(SUM(price::numeric * quantity) FILTER (WHERE is_refunded IS FALSE), 0) AS actual
+                FROM seoul_youth_ai_hackathon.pos_orders
+                WHERE store_id = ? AND base_date BETWEEN ? AND ? AND is_refunded IS NOT NULL
+                GROUP BY base_date
+                ORDER BY base_date
+                """, (rs, row) -> new DailySale(rs.getObject("base_date", LocalDate.class),
+                rs.getBigDecimal("actual").longValueExact()), storeId(), from, to);
     }
 
     public String storeName() {

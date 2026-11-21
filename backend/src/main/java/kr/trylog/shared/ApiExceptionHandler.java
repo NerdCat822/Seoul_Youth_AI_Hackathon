@@ -12,6 +12,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -34,6 +35,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidInputException.class)
     ResponseEntity<ApiError> invalidInput(InvalidInputException exception) {
         return invalid(exception.fieldErrors());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiError> invalidParameter(MethodArgumentTypeMismatchException exception) {
+        return invalid(Map.of(exception.getName(), "입력 형식을 확인해주세요."));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
