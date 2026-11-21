@@ -170,12 +170,6 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.address-search {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
-  background: white;
-}
 .logout-button {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -184,9 +178,6 @@
   color: var(--navy);
   font-size: 13px;
   white-space: nowrap;
-}
-.postcode-frame {
-  height: 400px;
 }
 .address-lookup {
   min-width: 0;
@@ -295,12 +286,6 @@
 }
 .address-feedback .address-secondary {
   margin-inline-start: 8px;
-}
-.address-message {
-  padding: 16px;
-}
-.address-message button {
-  margin-top: 12px;
 }
 @media (max-width: 420px) {
   .auth-shell {

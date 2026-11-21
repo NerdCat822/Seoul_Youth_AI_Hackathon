@@ -69,7 +69,7 @@ function Field({
   name,
   label,
   error,
-  markRequired,
+  markRequired = true,
   ...input
 }: InputHTMLAttributes<HTMLInputElement> & {
   name: string;
@@ -81,7 +81,7 @@ function Field({
     <div className="form-field">
       <label htmlFor={'auth-' + name}>
         {label}
-        {markRequired && <RequiredMark />}
+        {input.required && markRequired && <RequiredMark />}
       </label>
       <input
         {...input}
@@ -167,9 +167,17 @@ export function AuthPage({
       if (!value('upjong')) issues.upjong = '업종을 선택해주세요.';
       if (!address) issues.address = '주소 검색에서 가게 주소를 선택해주세요.';
       if (!value('addressDetail')) issues.addressDetail = '상세 주소를 입력해주세요.';
-      if (!value('openedDate')) issues.openedDate = '개업일을 입력해주세요.';
-      if (!value('openTime')) issues.openTime = '영업 시작 시간을 입력해주세요.';
-      if (!value('closeTime')) issues.closeTime = '영업 종료 시간을 입력해주세요.';
+      const scheduleFields = event.currentTarget.querySelectorAll<HTMLInputElement>(
+        'input[type="date"], input[type="time"]',
+      );
+      for (const field of scheduleFields) {
+        if (field.validity.badInput) {
+          issues[field.name] =
+            field.type === 'date'
+              ? '개업일을 정확히 입력하거나 비워주세요.'
+              : '시간을 정확히 입력하거나 비워주세요.';
+        }
+      }
     }
     setMessage('');
     displayErrors(issues);
@@ -186,10 +194,12 @@ export function AuthPage({
               storeName: value('storeName'),
               upjong: value('upjong'),
               addressDetail: value('addressDetail'),
-              openTime: value('openTime'),
-              closeTime: value('closeTime'),
-              openedDate: value('openedDate'),
-              closedWeekdays: fields.getAll('closedWeekdays').map(Number),
+              openTime: value('openTime') || undefined,
+              closeTime: value('closeTime') || undefined,
+              openedDate: value('openedDate') || undefined,
+              closedWeekdays: fields.has('closedWeekdays')
+                ? fields.getAll('closedWeekdays').map(Number)
+                : undefined,
             })
           : await logIn(loginId, password);
       onAuthenticated(session);
@@ -211,7 +221,7 @@ export function AuthPage({
         <h1>{signup ? '가게 등록' : '우리 가게 로그인'}</h1>
         <p className="auth-lead">
           {signup
-            ? '가게 정보와 로그인에 사용할 계정을 입력해주세요.'
+            ? '별표(*)가 있는 항목을 입력해주세요.'
             : '가게 계정으로 로그인해 시도와 매출 기록을 확인하세요.'}
         </p>
         {signup && !signupEnabled ? (
@@ -244,6 +254,7 @@ export function AuthPage({
                 autoCapitalize="none"
                 spellCheck={false}
                 required
+                markRequired={signup}
                 maxLength={40}
                 error={errors.loginId}
               />
@@ -253,6 +264,7 @@ export function AuthPage({
                 type="password"
                 autoComplete={signup ? 'new-password' : 'current-password'}
                 required
+                markRequired={signup}
                 maxLength={128}
                 minLength={signup ? 8 : undefined}
                 placeholder={signup ? '8자 이상' : undefined}
@@ -268,7 +280,6 @@ export function AuthPage({
                     label="가게 이름"
                     autoComplete="organization"
                     required
-                    markRequired
                     maxLength={100}
                     error={errors.storeName}
                   />
@@ -296,29 +307,25 @@ export function AuthPage({
                     disabled={!address}
                     maxLength={150}
                     required
-                    markRequired
                     error={errors.addressDetail}
                   />
                   <Field
                     name="openedDate"
-                    label="개업일"
+                    label="개업일 (선택)"
                     type="date"
-                    required
                     error={errors.openedDate}
                   />
                   <div className="auth-hours">
                     <Field
                       name="openTime"
-                      label="영업 시작 시간"
+                      label="영업 시작 시간 (선택)"
                       type="time"
-                      required
                       error={errors.openTime}
                     />
                     <Field
                       name="closeTime"
-                      label="영업 종료 시간"
+                      label="영업 종료 시간 (선택)"
                       type="time"
-                      required
                       error={errors.closeTime}
                     />
                   </div>

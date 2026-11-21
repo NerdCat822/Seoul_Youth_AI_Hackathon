@@ -20,8 +20,8 @@ public record SignupRequest(
         @NotBlank(message = "시군구 코드를 확인해주세요.") @Pattern(regexp = "[0-9]{5}", message = "시군구 코드는 5자리여야 해요.") String ctyCd,
         @NotBlank(message = "시군구 이름을 확인해주세요.") @Size(max = 30, message = "시군구 이름은 30자 이내로 입력해주세요.") String ctyNm,
         @NotBlank(message = "업종을 선택해주세요.") @Size(max = 50, message = "목록에서 업종을 선택해주세요.") String upjong,
-        @NotNull(message = "영업 시작 시간을 입력해주세요.") LocalTime openTime,
-        @NotNull(message = "영업 종료 시간을 입력해주세요.") LocalTime closeTime,
-        @NotNull(message = "개업일을 입력해주세요.") LocalDate openedDate,
+        LocalTime openTime,
+        LocalTime closeTime,
+        LocalDate openedDate,
         @Size(max = 7, message = "휴무일은 최대 7개까지 선택해주세요.") List<@NotNull @Min(0) @Max(6) Integer> closedWeekdays) {
 }

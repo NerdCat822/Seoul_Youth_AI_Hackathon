@@ -76,6 +76,6 @@ class JusoAddressClient {
 
     static ResponseStatusException unavailable() {
         return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                "주소 목록에 연결할 수 없어요. 다시 시도하거나 카카오 주소 검색을 이용해주세요.");
+                "주소 목록에 연결할 수 없어요. 잠시 후 다시 검색해주세요.");
     }
 }

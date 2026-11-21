@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { request } from '../api';
 import type { StoreAddress } from '../types';
 import { Icon } from './Icon';
-import { KakaoAddressSearch } from './KakaoAddressSearch';
 
 interface AddressSuggestion extends StoreAddress {
   roadAddress: string;
@@ -48,7 +47,6 @@ export function AddressSearch({
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
   const [composing, setComposing] = useState(false);
-  const [kakao, setKakao] = useState(false);
   const [active, setActive] = useState(-1);
   const [attempt, setAttempt] = useState(0);
   const [reply, setReply] = useState<SearchReply | null>(null);
@@ -56,7 +54,7 @@ export function AddressSearch({
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
 
-  const query = open && !selected && !composing && !kakao ? text.trim().normalize('NFC') : '';
+  const query = open && !selected && !composing ? text.trim().normalize('NFC') : '';
   const searching = query.length >= 2;
   const result = searching && reply?.query === query ? reply : null;
   const suggestions = result?.data?.suggestions ?? [];
@@ -125,19 +123,11 @@ export function AddressSearch({
     setReply(null);
   }
 
-  const choose = useCallback(
-    (address: StoreAddress) => {
-      // Search results include display-only fields. The signup API accepts only store address fields.
-      const { postalCode, address: street, megaCd, megaNm, ctyCd, ctyNm } = address;
-      onSelected({ postalCode, address: street, megaCd, megaNm, ctyCd, ctyNm });
-      setText(street);
-      setOpen(false);
-      setKakao(false);
-      setActive(-1);
-      setReply(null);
-    },
-    [onSelected],
-  );
+  function choose({ postalCode, address, megaCd, megaNm, ctyCd, ctyNm }: StoreAddress) {
+    onSelected({ postalCode, address, megaCd, megaNm, ctyCd, ctyNm });
+    setText(address);
+    closeList();
+  }
 
   function edit(value: string) {
     if (selected) onSelected(null);
@@ -173,7 +163,7 @@ export function AddressSearch({
     else if (!suggestions.length)
       status =
         result.data.coverage === 'local'
-          ? '기본 목록에 일치하는 주소가 없어요. 카카오 주소검색에서 전국 주소를 찾아보세요.'
+          ? '서울 전역과 전주 여의동 일대에서 일치하는 주소를 찾지 못했어요.'
           : '검색 결과가 없어요. 지역명이나 도로명·건물번호를 입력해주세요.';
     else if (result.more === 'loading') status = '다음 주소를 찾고 있어요…';
     else if (result.more === 'error') status = '다음 주소를 불러오지 못했어요.';
@@ -181,139 +171,113 @@ export function AddressSearch({
   }
 
   return (
-    <div className="address-lookup">
-      {!kakao && (
-        <div
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) closeList();
+    <div
+      className="address-lookup"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) closeList();
+      }}
+    >
+      <div className="address-input-wrap">
+        <Icon name="search" size={20} />
+        <input
+          ref={input}
+          id="auth-address"
+          name="address"
+          type="text"
+          role="combobox"
+          autoComplete="off"
+          placeholder="예: 여의동, 국회대로"
+          maxLength={100}
+          value={selected?.address ?? text}
+          aria-autocomplete="list"
+          aria-required="true"
+          aria-invalid={!!error}
+          aria-describedby={error ? 'address-error' : undefined}
+          aria-expanded={suggestions.length > 0}
+          aria-controls="address-options"
+          aria-activedescendant={suggestions[active] ? 'address-option-' + active : undefined}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+          onCompositionStart={() => {
+            setComposing(true);
+            setActive(-1);
+            setReply(null);
           }}
-        >
-          <div className="address-input-wrap">
-            <Icon name="search" size={20} />
-            <input
-              ref={input}
-              id="auth-address"
-              name="address"
-              type="text"
-              role="combobox"
-              autoComplete="off"
-              placeholder="예: 여의동, 국회대로"
-              maxLength={100}
-              value={selected?.address ?? text}
-              aria-autocomplete="list"
-              aria-required="true"
-              aria-invalid={!!error}
-              aria-describedby={error ? 'address-error' : undefined}
-              aria-expanded={suggestions.length > 0}
-              aria-controls="address-options"
-              aria-activedescendant={suggestions[active] ? 'address-option-' + active : undefined}
-              onFocus={() => setOpen(true)}
-              onClick={() => setOpen(true)}
-              onCompositionStart={() => {
-                setComposing(true);
-                setActive(-1);
-                setReply(null);
-              }}
-              onCompositionEnd={() => setComposing(false)}
-              onChange={(event) => edit(event.target.value)}
-              onKeyDown={keyDown}
-            />
-            {(text || selected) && (
-              <button
-                type="button"
-                className="address-clear"
-                aria-label="주소 지우기"
-                onClick={() => {
-                  edit('');
-                  input.current?.focus();
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-          <ul
-            ref={list}
-            id="address-options"
-            role="listbox"
-            aria-label="주소 검색 결과"
-            className="address-options"
-            hidden={!suggestions.length}
+          onCompositionEnd={() => setComposing(false)}
+          onChange={(event) => edit(event.target.value)}
+          onKeyDown={keyDown}
+        />
+        {(text || selected) && (
+          <button
+            type="button"
+            className="address-clear"
+            aria-label="주소 지우기"
+            onClick={() => {
+              edit('');
+              input.current?.focus();
+            }}
           >
-            {suggestions.map((item, index) => (
-              <li
-                key={[item.address, item.jibunAddress, item.postalCode, index].join('|')}
-                id={'address-option-' + index}
-                role="option"
-                aria-selected={active === index}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => choose(item)}
-              >
-                <strong>
-                  <Highlight text={item.roadAddress || item.address} query={query} />
-                </strong>
-                {item.jibunAddress && (
-                  <small>
-                    <Highlight text={item.jibunAddress} query={query} />
-                  </small>
-                )}
-              </li>
-            ))}
-          </ul>
-          {result?.data?.hasMore && (
-            <button
-              type="button"
-              className="address-more"
-              aria-controls="address-options"
-              aria-disabled={result.more === 'loading'}
-              onClick={loadMore}
-            >
-              {result.more === 'error' ? '주소 더 보기 다시 시도' : '주소 더 보기'}
-            </button>
-          )}
-          <div className="address-feedback" role="status">
-            {suggestions.length > 0 && (
-              <span className="visually-hidden">{suggestions.length}개 주소 후보. </span>
-            )}
-            {selected ? '우편번호 ' + selected.postalCode : status}
-            {!selected && result && !result.data && (
-              <button
-                type="button"
-                className="address-secondary"
-                onClick={() => {
-                  setReply(null);
-                  setAttempt((n) => n + 1);
-                  input.current?.focus();
-                }}
-              >
-                다시 시도
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-      <button
-        type="button"
-        className="address-secondary"
-        id={kakao ? 'auth-address' : undefined}
-        aria-invalid={kakao && !!error}
-        aria-describedby={kakao && error ? 'address-error' : undefined}
-        aria-expanded={kakao}
-        aria-controls="kakao-address-picker"
-        onClick={() => {
-          closeList();
-          setKakao(!kakao);
-          if (kakao) requestAnimationFrame(() => input.current?.focus());
-          else if (selected) {
-            setText(selected.address);
-            onSelected(null);
-          }
-        }}
+            ×
+          </button>
+        )}
+      </div>
+      <ul
+        ref={list}
+        id="address-options"
+        role="listbox"
+        aria-label="주소 검색 결과"
+        className="address-options"
+        hidden={!suggestions.length}
       >
-        {kakao ? '주소 입력으로 돌아가기' : '카카오 주소검색'}
-      </button>
-      <div id="kakao-address-picker" hidden={!kakao}>
-        {kakao && <KakaoAddressSearch query={text.trim()} onSelected={choose} />}
+        {suggestions.map((item, index) => (
+          <li
+            key={[item.address, item.jibunAddress, item.postalCode, index].join('|')}
+            id={'address-option-' + index}
+            role="option"
+            aria-selected={active === index}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => choose(item)}
+          >
+            <strong>
+              <Highlight text={item.roadAddress || item.address} query={query} />
+            </strong>
+            {item.jibunAddress && (
+              <small>
+                <Highlight text={item.jibunAddress} query={query} />
+              </small>
+            )}
+          </li>
+        ))}
+      </ul>
+      {result?.data?.hasMore && (
+        <button
+          type="button"
+          className="address-more"
+          aria-controls="address-options"
+          aria-disabled={result.more === 'loading'}
+          onClick={loadMore}
+        >
+          {result.more === 'error' ? '주소 더 보기 다시 시도' : '주소 더 보기'}
+        </button>
+      )}
+      <div className="address-feedback" role="status">
+        {suggestions.length > 0 && (
+          <span className="visually-hidden">{suggestions.length}개 주소 후보. </span>
+        )}
+        {status}
+        {result && !result.data && (
+          <button
+            type="button"
+            className="address-secondary"
+            onClick={() => {
+              setReply(null);
+              setAttempt((n) => n + 1);
+              input.current?.focus();
+            }}
+          >
+            다시 시도
+          </button>
+        )}
       </div>
     </div>
   );

@@ -30,10 +30,10 @@ export interface SignupInput extends StoreAddress {
   storeName: string;
   upjong: string;
   addressDetail: string;
-  openTime: string;
-  closeTime: string;
-  openedDate: string;
-  closedWeekdays: number[];
+  openTime?: string;
+  closeTime?: string;
+  openedDate?: string;
+  closedWeekdays?: number[];
 }
 
 export interface ReportPeriod {

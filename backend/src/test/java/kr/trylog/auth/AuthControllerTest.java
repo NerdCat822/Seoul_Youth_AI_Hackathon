@@ -104,7 +104,7 @@ class AuthControllerTest {
     @NullAndEmptySource
     @ValueSource(strings = {"  \t "})
     void signupRequiresAnAddressDetail(String detail) throws Exception {
-        signup(detail).andExpect(status().isBadRequest())
+        signup(signupForm(detail)).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.addressDetail").value("상세 주소를 입력해주세요."));
         verify(accounts, never()).signup(any());
     }
@@ -113,16 +113,30 @@ class AuthControllerTest {
     void signupAcceptsAnAddressDetail() throws Exception {
         when(accounts.signup(argThat(form -> "1층".equals(form.addressDetail()))))
                 .thenReturn(new StorePrincipal(17, "성수 분식"));
-        signup("1층").andExpect(status().isCreated()).andExpect(jsonPath("$.storeId").value(17));
+        signup(signupForm("1층")).andExpect(status().isCreated()).andExpect(jsonPath("$.storeId").value(17));
     }
 
-    private ResultActions signup(String detail) throws Exception {
+    @Test
+    void signupAcceptsMissingBusinessHoursAndOpeningDate() throws Exception {
+        var form = signupForm("1층");
+        form.remove(List.of("openTime", "closeTime", "openedDate"));
+        when(accounts.signup(argThat(input -> input.openTime() == null && input.closeTime() == null
+                && input.openedDate() == null && input.closedWeekdays() == null)))
+                .thenReturn(new StorePrincipal(18, "성수 분식"));
+        signup(form).andExpect(status().isCreated()).andExpect(jsonPath("$.storeId").value(18));
+    }
+
+    private ObjectNode signupForm(String detail) {
         ObjectNode form = json.createObjectNode()
                 .put("loginId", "test_owner").put("password", "test-password").put("storeName", "성수 분식")
                 .put("postalCode", "04782").put("address", "서울특별시 성동구 성수일로 1")
                 .put("megaCd", "11").put("megaNm", "서울특별시").put("ctyCd", "11200").put("ctyNm", "성동구")
                 .put("upjong", "Q0001").put("openTime", "10:00").put("closeTime", "20:00").put("openedDate", "2026-01-01");
         if (detail != null) form.put("addressDetail", detail);
+        return form;
+    }
+
+    private ResultActions signup(ObjectNode form) throws Exception {
         var anonymous = mvc.perform(get(PATH + "/session")).andReturn();
         return mvc.perform(post(PATH + "/signup").session((MockHttpSession) anonymous.getRequest().getSession())
                 .header(HEADER, token(anonymous)).contentType(MediaType.APPLICATION_JSON)
