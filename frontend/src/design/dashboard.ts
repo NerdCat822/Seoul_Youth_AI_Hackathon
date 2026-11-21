@@ -1,10 +1,12 @@
 import { request } from '../api';
 import { asDate, formatDate, formatMonth } from '../lib/dates';
+import { CHAT_ENABLED } from '../lib/features';
 import { difficulties } from '../lib/labels';
 import type { Forecast } from '../pages/ForecastPage';
 import type { AppData, Experiment, NeighborhoodCase } from '../types';
-import { mountChat } from './chat';
+import { publicCases, thumbnailByCaseId } from './case-thumbnails';
 import { loadWeekSales, mountHomeWeek, upcomingDates } from './home-week';
+import { navigateTo } from './screen-router';
 
 const categoryStyle = {
   MENU: { label: '메뉴·가격', tag: 'cat-menu', image: 'bg-cat-menu-img' },
@@ -28,19 +30,37 @@ const dayDiff = (a: string, b: string) =>
 const dateRange = (first: string, last: string) => `${formatDate(first)} ~ ${formatDate(last)}`;
 const softNote = (message: string) => `<p class="text-sm text-sub">${window.App.esc(message)}</p>`;
 
-function caseCard(item: NeighborhoodCase, compact = false) {
+type CaseCardData = Pick<
+  NeighborhoodCase,
+  'id' | 'title' | 'category' | 'summary' | 'cost' | 'difficulty'
+> &
+  Partial<Pick<NeighborhoodCase, 'durationDays' | 'demo'>>;
+
+function caseCard(item: CaseCardData, compact = false) {
   const c = categoryStyle[item.category];
   const { esc } = window.App;
+  const thumbnail = thumbnailByCaseId.get(item.id);
+  const art = thumbnail
+    ? `<img class="block w-full" src="${esc(thumbnail)}" width="940" height="400" loading="lazy" decoding="async" alt="">`
+    : `<div class="thumb ${c.image}"></div>`;
+  const meta = [
+    '비용 ' + won(item.cost),
+    difficulties[item.difficulty],
+    item.durationDays == null ? '' : lengthLabel(item.durationDays),
+    item.demo ? '가상 사례' : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
   return `<a href="idea.html?id=${encodeURIComponent(item.id)}" class="idea-card">
-      ${compact ? '' : `<div class="thumb ${c.image}"></div>`}
+      ${compact ? '' : art}
       <div class="body"><span class="cat ${c.tag} self-start">${c.label}</span>
         <p class="mt-3 text-base font-semibold leading-6">${esc(item.title)}</p>
         <p class="text-sm leading-5 text-sub">${esc(item.summary)}</p>
-        <p class="mt-1 text-[13px] font-medium text-sub">비용 ${won(item.cost)} · ${difficulties[item.difficulty]} · ${lengthLabel(item.durationDays)}${item.demo ? ' · 가상 사례' : ''}</p></div></a>`;
+        <p class="mt-1 text-[13px] font-medium text-sub">${esc(meta)}</p></div></a>`;
 }
 
 function activeCard(item: Experiment, data: AppData) {
-  const { esc, icon } = window.App;
+  const { esc } = window.App;
   const hot = item.status === 'READY';
   const today = data.overview.today;
   const daysLeft = dayDiff(item.checkDate, today);
@@ -54,8 +74,8 @@ function activeCard(item: Experiment, data: AppData) {
         100,
     ),
   );
-  return `<a href="record.html?id=${encodeURIComponent(item.id)}" class="block rounded-card bg-white p-5 transition-shadow hover:shadow-panel ${hot ? 'border-2 border-brand/60 shadow-panel' : 'border border-line-light'}">
-        <div class="flex items-center justify-between"><h3 class="text-[18px] font-semibold">${esc(item.title)}</h3><span class="badge ${hot ? 'badge-check' : 'badge-progress'}">${hot ? '확인 필요' : '진행 중'}</span></div>
+  return `<a href="${hot ? 'result' : 'record'}.html?id=${encodeURIComponent(item.id)}" class="block rounded-card bg-white px-5 py-6 transition-shadow hover:shadow-panel ${hot ? 'border-2 border-brand/50 shadow-panel' : 'border border-line-light'}">
+        <div class="flex items-center justify-between gap-3"><h3 class="text-[18px] font-semibold">${esc(item.title)}</h3><span class="badge ${hot ? 'bg-[#fff1f2] text-up' : 'badge-progress'}">${hot ? '확인 필요' : '진행 중'}</span></div>
         <dl class="mt-4 grid grid-cols-4 gap-4">
           <div><dt class="text-[13px] text-sub">시작일</dt><dd class="mt-1 text-sm font-medium text-body">${formatDate(item.startDate)}</dd></div>
           <div><dt class="text-[13px] text-sub">종료일</dt><dd class="mt-1 text-sm font-medium text-body">${formatDate(item.endDate)}</dd></div>
@@ -63,11 +83,10 @@ function activeCard(item: Experiment, data: AppData) {
             <span class="ml-1 text-[13px] font-semibold text-brand">${daysLeft === 0 ? '오늘' : daysLeft > 0 ? daysLeft + '일 뒤' : Math.abs(daysLeft) + '일 전'}</span></dd></div>
           <div><dt class="text-[13px] text-sub">비교 항목</dt><dd class="mt-1 truncate text-sm font-medium text-body">${esc(menu ?? '메뉴 미지정')}</dd></div>
         </dl>
-        <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-surface"><div class="h-full rounded-full bg-brand" style="width:${progress}%"></div></div>
+        <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-surface" role="progressbar" aria-label="진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress)}"><div class="h-full rounded-full bg-brand" style="width:${progress}%"></div></div>
         ${
           hot
-            ? `<p class="mt-4 flex items-center justify-between text-[15px] font-medium text-danger">변경 전후 판매 자료를 비교해 보세요.
-          <span class="inline-flex items-center text-sm font-semibold text-brand-text">결과 확인하기 ${icon('chevron-right', 16)}</span></p>`
+            ? '<div class="divider my-5"></div><p class="text-[15px] font-medium text-danger">변경 전후 판매 자료를 비교해 보세요.</p>'
             : ''
         }
       </a>`;
@@ -83,7 +102,7 @@ function miniCalendar(data: AppData) {
   );
   const grid = el('[data-mini-cal]');
   const header = grid.closest('section')!;
-  el('h2', header).textContent = formatMonth(month);
+  el('h2 a', header).textContent = formatMonth(month);
   grid.previousElementSibling!.innerHTML = Array.from(
     '일월화수목금토',
     (d) => `<span class="py-2">${d}</span>`,
@@ -117,7 +136,9 @@ function home(data: AppData, signal: AbortSignal) {
   heading.className = 'section-title';
   heading.textContent = overview.storeName + ' 기록 현황';
   title.replaceWith(heading);
-  mountHomeWeek(el('[data-fc-total]').closest('section')!, data, signal);
+  const week = document.createElement('section');
+  el('main').prepend(week);
+  mountHomeWeek(week, data, signal);
   const count = (status: Experiment['status']) =>
     experiments.filter((e) => e.status === status).length;
   text('[data-greet]', `결과를 확인할 기록이 ${count('READY')}건 있어요.`);
@@ -144,26 +165,28 @@ function home(data: AppData, signal: AbortSignal) {
       .join('') || softNote('표시할 동네 사례가 없어요.');
 }
 
-function guest(data: AppData | null) {
-  const entries = data?.cases ?? [];
-  const none = data ? '표시할 사례가 없어요.' : '로그인하면 동네 사례를 확인할 수 있어요.';
-  el('[data-today]').innerHTML =
-    entries
-      .filter((c) => c.difficulty === 'EASY')
-      .slice(0, 3)
-      .map((c) => caseCard(c))
-      .join('') || softNote(none);
+function guest(data: AppData | null, welcome = false) {
+  const entries: CaseCardData[] =
+    data?.cases ?? publicCases.map((item) => ({ ...item, demo: true }));
+  const today = entries.filter((item) => item.difficulty === 'EASY').slice(0, 3);
+  const free = entries.filter((item) => item.cost === 0);
+  const none = '표시할 사례가 없어요.';
+  el('[data-today]').innerHTML = today.map((c) => caseCard(c)).join('') || softNote(none);
   el('[data-free]').innerHTML =
-    entries
-      .filter((c) => c.cost === 0)
+    [
+      ...free.filter((item) => !today.includes(item)),
+      ...free.filter((item) => today.includes(item)),
+    ]
       .slice(0, 3)
       .map((c) => caseCard(c))
       .join('') || softNote(none);
-  text('main .mt-20 section:last-child p', data ? `동네 가게 사례 ${entries.length}가지` : none);
-  const action = el<HTMLAnchorElement>('a[href="forecast.html?state=empty"]');
+  text('main .mt-20.grid section:last-child p', `동네 가게 시도 사례 ${entries.length}가지`);
+  const forecastCard = el('main .mt-20.grid section:first-child');
+  el('p', forecastCard).textContent = '가게에 저장된 판매 자료로 다음 7일의 예상매출을 확인해요.';
+  const action = el<HTMLAnchorElement>('a', forecastCard);
   action.href = 'forecast.html';
   action.innerHTML = `예상매출 보기 ${window.App.icon('chevron-right', 16)}`;
-  if (data) {
+  if (data && !welcome) {
     el<HTMLAnchorElement>('main a[href="signup.html"]').href = 'store.html';
     el('main a[href="store.html"]').textContent = '가게 정보 보기';
   }
@@ -174,9 +197,7 @@ function explore(data: AppData) {
   const tabs = [['all', '전체'], ...Object.entries(categoryStyle).map(([k, c]) => [k, c.label])];
   let current = 'all';
   let free = new URLSearchParams(location.search).get('free') === '1';
-  const section = el('[data-rec-section]');
-  el('h2', section).textContent = data.overview.storeName + '에 맞는 추천';
-  el('p', section).textContent = '가게별 맞춤 추천은 아직 제공되지 않아요.';
+  el('[data-rec-section]').hidden = true;
   const controls = el('[data-cat-tabs]');
   const onlyFree = el('button[data-free]');
   function render() {
@@ -210,12 +231,13 @@ function explore(data: AppData) {
 function idea(data: AppData) {
   const id = new URLSearchParams(location.search).get('id');
   const item = id ? data.cases.find((i) => i.id === id) : data.cases[0];
-  const link = el<HTMLAnchorElement>('[data-try]');
+  const action = el<HTMLButtonElement>('[data-try]');
   if (!item) {
     text('[data-article]', '사례를 찾을 수 없어요.');
     el('[data-peers]').hidden = true;
-    link.textContent = '전체 사례 보기';
-    link.href = 'explore.html';
+    action.textContent = '전체 사례 보기';
+    action.removeAttribute('aria-controls');
+    action.addEventListener('click', () => navigateTo('explore.html'));
     return;
   }
   const { esc, icon } = window.App;
@@ -249,7 +271,12 @@ function idea(data: AppData) {
       .join(
         '',
       )}</div><ul class="mt-4 space-y-2">${segments.map(([label, n, color]) => `<li class="flex items-center justify-between text-sm"><span class="flex items-center gap-2 text-body"><i class="h-1.5 w-1.5 rounded-full" style="background:${color}"></i>${label}</span><span class="font-medium">${n}곳</span></li>`).join('')}</ul><div class="divider my-5"></div><p class="text-sm leading-5 text-sub">가게마다 결과가 달라요.<br>늘어난 이유를 이 일 하나로 단정할 수는 없어요.</p>`;
-  link.href = 'ai.html?idea=' + encodeURIComponent(item.id);
+  if (!CHAT_ENABLED) action.removeAttribute('aria-controls');
+  action.addEventListener('click', () => {
+    if (CHAT_ENABLED) {
+      document.dispatchEvent(new CustomEvent('trylog-open-chat', { detail: { ideaId: item.id } }));
+    } else navigateTo('ai.html?idea=' + encodeURIComponent(item.id));
+  });
 }
 
 function statCards(stats: string[][]) {
@@ -368,14 +395,12 @@ function baseline(f: Forecast, data: AppData) {
 }
 
 export async function mountDashboard(page: string, data: AppData | null, signal: AbortSignal) {
-  if (page === 'home-guest') {
-    guest(data);
-    await mountChat(el('[data-ai-host]'), true, data, signal);
+  if (page === 'home-guest' || page === 'welcome') {
+    guest(data, page === 'welcome');
   } else if (data) {
     switch (page) {
       case 'home':
         home(data, signal);
-        await mountChat(el('[data-ai-host]'), true, data, signal);
         break;
       case 'explore':
         explore(data);

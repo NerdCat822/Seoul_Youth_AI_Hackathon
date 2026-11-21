@@ -112,9 +112,56 @@
       toast('기록을 저장했어요.');
     }
 
+
+    /* ---------- 사진 받기 · 메뉴 고르기 ---------- */
+    const PHOTO_ASK = {
+      menu: { what: '메뉴판의 사진', label: '메뉴판' },
+      store: { what: '가게 입구 사진', label: '가게 입구' },
+      delivery: { what: '배달 앱 메뉴 화면', label: '배달 앱 화면' },
+    };
+    const MENU_ITEMS = ['스팸두부찌개', '고기두부찌개', '김치고기짜글이', '애호박제육볶음', '차돌된장찌개', '냉이해물된장찌개', '치즈콩비지찌개', '선지해장국'];
+    let seq = 0;
+    const photoAsk = ask => `<div class="mt-4 flex flex-wrap items-center gap-2" data-photo>
+        <label class="btn btn-md btn-primary cursor-pointer">${icon('camera', 18)} 사진 올리기
+          <input type="file" accept="image/*" class="sr-only" aria-label="${ask.label} 사진 올리기"></label>
+        <button type="button" class="hint-chip" data-sample>예시 사진으로 해보기</button></div>`;
+    const userImage = (src, alt) => add(`<div class="flex justify-end"><img src="${src}" alt="${esc(alt)}" class="w-[188px] rounded-2xl border border-line-light object-cover shadow-panel"></div>`);
+
+    async function afterPhoto(i, src) {
+      userImage(src, `올린 ${PHOTO_ASK[i.cat].label} 사진`);
+      await typing();
+      if (i.cat !== 'menu') {
+        return confirmRecord(recordFromIdea(i), `${PHOTO_ASK[i.cat].label} 사진을 확인했어요. 오늘부터 ${i.weeks}주 동안 진행하는 것으로 기록을 정리했어요. 날짜가 맞는지 확인해 주세요.`);
+      }
+      const n = ++seq;
+      const el = ai('메뉴판 이미지를 확인했어요.<br>대표 메뉴로 설정하실 메뉴를 골라주세요.', `
+        <section class="mt-4 rounded-card border border-line bg-white p-5" data-menu-card>
+          <div class="flex items-center justify-between gap-3"><h3 class="text-[18px] font-bold">${esc(i.title)}</h3>
+            <span class="rounded-md bg-surface px-2 py-0.5 text-[13px] font-medium text-sub" data-save-state>저장 전</span></div>
+          <div class="divider my-4"></div>
+          <fieldset><legend class="sr-only">대표 메뉴 고르기</legend><div class="space-y-0.5">${MENU_ITEMS.map(m => `
+            <label class="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-[15px] font-medium hover:bg-surface-2">
+              <input type="radio" name="menu-${n}" value="${m}" class="h-[18px] w-[18px] accent-brand"> ${m}</label>`).join('')}</div></fieldset>
+          <div class="divider my-4"></div>
+          <div class="flex justify-end"><button type="button" class="btn btn-md btn-primary" data-pick disabled>선택 완료</button></div>
+        </section>`);
+      const card = $('[data-menu-card]', el), pick = $('[data-pick]', card);
+      card.addEventListener('change', () => (pick.disabled = false));
+      pick.addEventListener('click', () => {
+        const menu = $('input:checked', card).value;
+        $$('input, button', card).forEach(b => (b.disabled = true));
+        $('[data-save-state]', card).textContent = '선택함';
+        run(async () => {
+          user(`${menu}로 할게요.`);
+          await confirmRecord(recordFromIdea(i, `메뉴판 맨 위에 <b class="font-semibold text-brand">${esc(menu)}</b> 배치 · "추천" 표시`),
+            `대표 메뉴를 ${menu}로 정리했어요. 오늘부터 ${i.weeks}주 동안 진행하는 것으로 이해했어요. 날짜가 맞는지 확인해 주세요.`);
+        });
+      });
+    }
+
     /* ---------- 시나리오 ---------- */
-    const recordFromIdea = i => ({
-      id: 'new', title: i.title, change: esc(i.desc), period: '12월 3일(목) ~ 12월 16일(수)', periodShort: '12월 3일 ~ 12월 16일',
+    const recordFromIdea = (i, change) => ({
+      id: 'new', title: i.title, change: change || esc(i.desc), period: '12월 3일(목) ~ 12월 16일(수)', periodShort: '12월 3일 ~ 12월 16일',
       periodNote: `"${i.weeks}주"를 실제 날짜로 바꿨어요`, result: '12월 17일(목)', compare: i.cat === 'delivery' ? '배달 주문 건수' : '관련 메뉴 주문 건수 · 매출액',
       needs: '변경 전후 메뉴별 판매 자료', prep: [['변경 전', '11월 19일 ~ 12월 2일'], ['변경 후', '12월 3일 ~ 12월 16일'], ['', '<b class="font-semibold">메뉴별 판매 수량 · 매출액</b>이 있는 주문 데이터']],
     });
@@ -140,9 +187,16 @@
         ai(esc(lead), ideaCards(ids) + `<p class="mt-3 text-sm text-sub">효과는 가게마다 달라요. 적용한 내용을 기록해 두면 전후 결과로 확인할 수 있어요.</p>`
           + chips([['다른 해볼 일 보기', 'more'], ['비용이 들어도 괜찮아요', 'paid']]));
       },
+      /* ID-02 "우리 가게에서 해보기" · 대화 속 "시도해보기": 사진 → (메뉴 선택) → 기록 확인 */
       async tryIdea(id) {
-        const i = idea(id); user(`${i.title} 해볼게.`);
-        await confirmRecord(recordFromIdea(i), `기록할 내용을 정리했어요. 오늘부터 ${i.weeks}주 동안 진행하는 것으로 이해했어요. 날짜가 맞는지 확인해 주세요.`);
+        const i = idea(id);
+        user(i.title); await typing();
+        const ask = PHOTO_ASK[i.cat];
+        const el = ai(`${esc(i.title)} 작업을 시작할게요.<br>먼저, ${ask.what}을 찍어서 올려주세요.`, photoAsk(ask));
+        const box = $('[data-photo]', el);
+        const done = src => { $$('button, input', box).forEach(b => (b.disabled = true)); box.remove(); run(() => afterPhoto(i, src)); };
+        $('input', box).addEventListener('change', e => { const f = e.target.files[0]; if (f) done(URL.createObjectURL(f)); });
+        $('[data-sample]', box).addEventListener('click', () => done(i.cat === 'menu' ? 'assets/img/menu-board.png' : i.img));
       },
       async record(text = '오늘부터 2주 동안 떡볶이 세트를 9,000원에서 8,000원으로 내려 볼게.') {
         user(text);
@@ -185,82 +239,119 @@
   }
   window.TrylogChat = Chat;
 
-  /* ---------- 홈 오른쪽 AI 대화 패널 ---------- */
-  function mountPanel(host, { hints = true } = {}) {
-    host.innerHTML = `
-      <aside data-ai-panel class="flex flex-col overflow-hidden rounded-panel border border-line-light bg-white shadow-panel" aria-label="AI 대화">
-        <div class="flex h-20 flex-none items-center justify-between px-6">
-          <button type="button" class="icon-btn" data-panel-list aria-label="대화 목록">${icon('menu', 24)}</button>
-          <h2 class="text-[18px] font-bold" data-panel-title>대화</h2>
-          <button type="button" class="btn btn-lg btn-neutral gap-1.5" data-panel-min>작게보기 ${icon('collapse', 16)}</button>
-        </div>
-        <div class="relative min-h-0 flex-1">
-          <div class="absolute inset-0 overflow-y-auto px-6 pb-4" data-chat-scroll>
-            <div class="flex min-h-full flex-col">
-              <div class="m-auto flex flex-col items-center py-10 text-center" data-chat-empty>
-                <p class="text-[18px] font-bold">해본 일이나 고민을 바로 남길 수 있어요</p>
-                <p class="mt-2 text-base text-sub">새로운 방법을 찾고, 기록하고, 달라진 결과를 확인해 보세요.</p>
-                <button type="button" class="mt-14 flex h-20 w-20 items-center justify-center rounded-full border border-line bg-white shadow-panel hover:bg-surface-2" data-mic aria-label="음성으로 말하기">${icon('mic', 32)}</button>
-              </div>
-              <div class="space-y-6 pt-2" data-chat-log></div>
+  /* ---------- 오른쪽 분할 AI 패널 (클로드 아티팩트처럼 화면을 나눠 씀) ----------
+     body[data-ai="open"]  : 이 화면에서 처음엔 열린 상태 (사용자가 직접 열고 닫으면 sessionStorage 값이 우선)
+     body[data-ai="off"]   : 패널 없음 (ai.html · 로그인 · 가입)
+     body[data-ai-hints]   : center(로그인 전 홈) | bottom(HM-01)                                         */
+  const KEY = 'trylog.aiPanel';
+  function mountGlobal() {
+    const body = document.body, topbar = $('[data-topbar]');
+    if (!topbar || topbar.dataset.topbar === 'minimal' || body.dataset.ai === 'off') return null;
+    const hintMode = body.dataset.aiHints || '';
+    const hintBtns = `<button type="button" class="hint-chip" data-hint="lunch">점심시간에 손님이 줄었어요</button>
+      <button type="button" class="hint-chip" data-hint="free">비용 없이 고객을 늘리고 싶어요</button>
+      <button type="button" class="hint-chip" data-hint="price">최근 메뉴 가격을 바꿨어요</button>`;
+    const root = document.createElement('aside');
+    root.className = 'ai-panel flex flex-col overflow-hidden rounded-panel border border-line-light bg-white shadow-panel';
+    root.setAttribute('aria-label', 'AI 대화'); root.dataset.aiPanel = ''; root.id = 'ai-panel';
+    root.innerHTML = `
+      <div class="grid h-20 flex-none grid-cols-[1fr_auto_1fr] items-center px-6">
+        <button type="button" class="icon-btn justify-self-start" data-panel-list aria-label="대화 목록" aria-expanded="false">${icon('menu', 24)}</button>
+        <h2 class="text-[18px] font-bold" data-panel-title>대화</h2>
+        <span class="flex items-center justify-self-end gap-2"><a href="ai.html" class="btn btn-lg btn-neutral gap-1.5">크게 보기 ${icon('expand', 16)}</a>
+          <button type="button" class="icon-btn" data-ai-close aria-label="대화 닫기">${icon('close', 24)}</button></span>
+      </div>
+      <div class="relative min-h-0 flex-1">
+        <div class="absolute inset-0 overflow-y-auto px-6 pb-4" data-chat-scroll>
+          <div class="flex min-h-full flex-col">
+            <div class="m-auto flex flex-col items-center py-10 text-center" data-chat-empty>
+              <p class="text-[18px] font-bold">해본 일이나 고민을 바로 남길 수 있어요</p>
+              <p class="mt-2 text-base text-sub">새로운 방법을 찾고, 기록하고, 달라진 결과를 확인해 보세요.</p>
+              <button type="button" class="mt-14 flex h-20 w-20 items-center justify-center rounded-full border border-line bg-white shadow-panel hover:bg-surface-2" data-mic aria-label="음성으로 말하기">${icon('mic', 32)}</button>
+              ${hintMode === 'center' ? `<div class="mt-12 flex flex-col items-center gap-3" data-hints>${hintBtns}</div>` : ''}
             </div>
-          </div>
-          <div class="absolute inset-0 overflow-y-auto bg-white px-6" data-chat-list hidden>
-            <div class="relative"><span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sub">${icon('search', 18)}</span>
-              <input class="input h-12 border-0 bg-surface pl-11" placeholder="검색어를 입력해주세요" data-list-search aria-label="대화 검색"></div>
-            <ul class="mt-6 space-y-1" data-list-items></ul>
+            <div class="space-y-6 pt-2" data-chat-log></div>
           </div>
         </div>
-        <div class="flex-none px-6 pb-6">
-          ${hints ? `<div class="mb-6 flex flex-wrap gap-2" data-hints>
-            <button type="button" class="hint-chip" data-hint="lunch">점심시간에 손님이 줄었어요</button>
-            <button type="button" class="hint-chip" data-hint="free">비용 없이 고객을 늘리고 싶어요</button>
-            <button type="button" class="hint-chip" data-hint="price">최근 메뉴 가격을 바꿨어요</button></div>` : ''}
-          <form class="composer" data-chat-form>
-            <label class="sr-only" for="panel-input">AI에게 말하기</label>
-            <input id="panel-input" class="w-full border-0 bg-transparent p-0 text-base placeholder:text-muted focus:outline-none" placeholder="이어서 이야기해 주세요." data-chat-input autocomplete="off">
-            <div class="mt-4 flex items-center justify-between">
-              <a href="upload.html" class="round-btn" aria-label="자료 첨부">${icon('add', 22)}</a>
-              <span class="flex gap-2"><button type="button" class="round-btn" data-mic aria-label="음성 입력">${icon('mic', 18)}</button>
-                <button class="send-btn" aria-label="보내기">${icon('arrow-up', 18)}</button></span>
-            </div>
-          </form>
+        <div class="absolute inset-0 overflow-y-auto bg-white px-6" data-chat-list hidden>
+          <div class="relative"><span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sub">${icon('search', 18)}</span>
+            <input class="input h-12 border-0 bg-surface pl-11" placeholder="검색어를 입력해주세요" data-list-search aria-label="대화 검색"></div>
+          <ul class="mt-6 space-y-1" data-list-items></ul>
         </div>
-      </aside>
-      <button type="button" class="fixed bottom-8 right-8 z-30 flex h-14 items-center gap-2 rounded-full bg-heading px-5 text-[15px] font-semibold text-white shadow-pop hover:bg-black" data-ai-fab hidden>${icon('sparkling', 20)} AI 대화</button>`;
+      </div>
+      <div class="flex-none px-6 pb-6">
+        ${hintMode === 'bottom' ? `<div class="mb-6 flex flex-wrap gap-2" data-hints>${hintBtns}</div>` : ''}
+        <form class="composer" data-chat-form>
+          <label class="sr-only" for="panel-input">AI에게 말하기</label>
+          <input id="panel-input" class="w-full border-0 bg-transparent p-0 text-base placeholder:text-muted focus:outline-none" placeholder="${hintMode === 'center' ? '고민을 입력해주세요' : '이어서 이야기해 주세요.'}" data-chat-input autocomplete="off">
+          <div class="mt-4 flex items-center justify-between">
+            <a href="upload.html" class="round-btn" aria-label="자료 첨부">${icon('add', 22)}</a>
+            <span class="flex gap-2"><button type="button" class="round-btn" data-mic aria-label="음성 입력">${icon('mic', 18)}</button>
+              <button class="send-btn" aria-label="보내기">${icon('arrow-up', 18)}</button></span>
+          </div>
+        </form>
+      </div>`;
+    body.appendChild(root);
 
-    const panel = $('[data-ai-panel]', host), fab = $('[data-ai-fab]', host);
-    const chat = Chat(panel, { compact: true });
-    const list = $('[data-chat-list]', panel), items = $('[data-list-items]', panel);
+    // 상단바 아래 콘텐츠만 밀어냄 (상단바는 전체 폭 유지)
+    [...body.children].forEach(el => {
+      if (el === root || el === topbar || el.tagName === 'SCRIPT' || el.classList.contains('toast')) return;
+      el.classList.add('ai-shift');
+    });
+
+    const chat = Chat(root, { compact: true });
+    const list = $('[data-chat-list]', root), items = $('[data-list-items]', root);
     const renderList = q => {
       items.innerHTML = D.chats.filter(c => !q || c.title.includes(q)).map(c => `<li><a href="${c.href}" class="flex items-center gap-3 rounded-xl px-2 py-2.5 hover:bg-surface-2">
         <span class="ai-avatar">${icon('sparkling', 16)}</span><span><span class="block text-sm font-semibold">${esc(c.title)}</span>
         <span class="block text-[13px] text-sub">${esc(c.meta)}</span></span></a></li>`).join('') || '<li class="py-6 text-center text-sm text-sub">검색 결과가 없어요.</li>';
     };
     renderList('');
-    $('[data-list-search]', panel).addEventListener('input', e => renderList(e.target.value.trim()));
-    $('[data-panel-list]', panel).addEventListener('click', () => {
-      list.hidden = !list.hidden;
-      $('[data-panel-title]', panel).textContent = list.hidden ? '대화' : '대화 목록';
+    $('[data-list-search]', root).addEventListener('input', e => renderList(e.target.value.trim()));
+    $('[data-panel-list]', root).addEventListener('click', e => {
+      list.hidden = !list.hidden; e.currentTarget.setAttribute('aria-expanded', String(!list.hidden));
+      $('[data-panel-title]', root).textContent = list.hidden ? '대화' : '대화 목록';
     });
-    $$('[data-mic]', panel).forEach(b => b.addEventListener('click', () => toast('음성 입력은 준비 중이에요. 아래 문장을 눌러 시작해 보세요.')));
-    panel.addEventListener('click', e => { if (e.target.closest('[data-hint]')) { const h = $('[data-hints]', panel); h && h.remove(); } });
+    $$('[data-mic]', root).forEach(b => b.addEventListener('click', () => toast('음성 입력은 준비 중이에요. 아래 문장을 눌러 시작해 보세요.')));
+    root.addEventListener('click', e => { if (e.target.closest('[data-hint]')) $$('[data-hints]', root).forEach(h => h.remove()); });
 
-    // 넓은 화면: 오른쪽에 고정 · 좁은 화면: 버튼으로 여닫는 서랍
-    const wide = matchMedia('(min-width: 1680px)');
-    let open = wide.matches;
-    const base = panel.className;
-    function layout() {
-      panel.hidden = !open; fab.hidden = open;
-      host.style.width = wide.matches && open ? '552px' : '0px';
-      panel.className = base + (wide.matches ? ' sticky top-20 h-[calc(100vh-112px)] w-[552px]'
-        : ' fixed right-6 top-20 bottom-6 z-40 w-[552px] max-w-[calc(100vw-48px)] shadow-pop');
+    // 열고 닫기
+    const stored = sessionStorage.getItem(KEY);
+    let isOpen = stored ? stored === 'open' : body.dataset.ai === 'open';
+    let tipT;
+    function sync() {
+      body.classList.toggle('ai-open', isOpen);
+      root.inert = !isOpen; root.setAttribute('aria-hidden', String(!isOpen));
+      $$('[data-ai-toggle]').forEach(b => { b.setAttribute('aria-expanded', String(isOpen)); b.classList.toggle('text-heading', isOpen); });
     }
-    $('[data-panel-min]', panel).addEventListener('click', () => { open = false; layout(); });
-    fab.addEventListener('click', () => { open = true; layout(); $('[data-chat-input]', panel).focus(); });
-    wide.addEventListener('change', () => { open = wide.matches; layout(); });
-    layout();
-    return chat;
+    function open(opts = {}) {
+      const was = isOpen;
+      if (!was) { isOpen = true; sessionStorage.setItem(KEY, 'open'); sync(); hideTip(); }
+      const go = () => {
+        if (opts.idea) chat.run(() => chat.flows.tryIdea(opts.idea));
+        else if (!opts.silent) $('[data-chat-input]', root).focus({ preventScroll: true });
+      };
+      was ? go() : setTimeout(go, 380);   // 패널이 다 들어온 뒤 대화 시작
+    }
+    function close() {
+      if (!isOpen) return;
+      isOpen = false; sessionStorage.setItem(KEY, 'closed'); sync(); showTip();
+    }
+    function showTip() {
+      const tip = $('[data-ai-tip]'); if (!tip) return;
+      tip.hidden = false; requestAnimationFrame(() => tip.classList.add('is-on'));
+      clearTimeout(tipT); tipT = setTimeout(hideTip, 3200);
+    }
+    function hideTip() { const tip = $('[data-ai-tip]'); if (tip) { tip.classList.remove('is-on'); clearTimeout(tipT); tipT = setTimeout(() => (tip.hidden = true), 200); } }
+
+    $('[data-ai-close]', root).addEventListener('click', close);
+    document.addEventListener('click', e => { if (e.target.closest('[data-ai-toggle]')) isOpen ? close() : open(); });
+
+    // 첫 화면은 애니메이션 없이 바로 그 상태로
+    body.classList.add('ai-instant'); sync();
+    requestAnimationFrame(() => requestAnimationFrame(() => body.classList.remove('ai-instant')));
+
+    return { open, close, toggle: () => (isOpen ? close() : open()), get isOpen() { return isOpen; }, chat };
   }
-  window.mountAiPanel = mountPanel;
+  window.TrylogAI = mountGlobal();
 })();

@@ -136,25 +136,31 @@ function upload(r: Experiment, data: AppData, signal: AbortSignal) {
     file = files[0];
     message.textContent = '';
     fileList();
-    showStep(2);
   }
   function fileList() {
     el<HTMLButtonElement>('[data-next]').disabled = !file;
     el<HTMLButtonElement>('[data-show]').disabled = !file;
     el('[data-warn]').hidden = true;
-    el('[data-files]').innerHTML = file
-      ? `<li class="flex items-center gap-3 py-3.5"><span class="text-sub">${icon('file-excel', 20)}</span><span class="flex-1 truncate text-sm text-body">${esc(file.name)}</span><span class="text-[13px] font-medium text-brand">선택됨</span><button type="button" class="icon-btn h-7 w-7 text-sub" aria-label="선택한 파일 지우기" data-remove-upload>${icon('close', 16)}</button></li>`
-      : '<li class="py-6 text-center text-sm text-sub">올린 파일이 없어요.</li>';
+    const row = file
+      ? `<li class="flex items-center gap-3 py-3.5"><span class="text-sub">${icon('file-excel', 20)}</span><span class="min-w-0 flex-1 truncate text-sm text-body">${esc(file.name)}</span><span class="text-[13px] font-medium text-brand">선택됨</span><button type="button" class="icon-btn h-7 w-7 text-sub" aria-label="선택한 파일 지우기" data-remove-upload>${icon('close', 16)}</button></li>`
+      : '';
+    el('[data-files1]').hidden = !file;
+    el('[data-files1]').innerHTML = row;
+    el('[data-files]').innerHTML =
+      row || '<li class="py-6 text-center text-sm text-sub">올린 파일이 없어요.</li>';
     el('[data-checks]').innerHTML = file
       ? '<li class="flex items-start gap-3 py-4"><span class="text-[15px] font-medium text-body">결과 보기를 누르면 변경 전후 주문 내역을 확인해요.</span></li>'
       : '';
   }
-  el('[data-files]').onclick = (event) => {
+  const removeFile = (event: MouseEvent) => {
     if (!busy && (event.target as HTMLElement).closest('[data-remove-upload]')) {
       file = null;
       fileList();
+      message.textContent = '';
     }
   };
+  el('[data-files1]').onclick = removeFile;
+  el('[data-files]').onclick = removeFile;
   document.querySelectorAll<HTMLInputElement>('[data-input]').forEach((input) => {
     input.multiple = false;
     input.accept = '.xlsx,.csv';
@@ -322,38 +328,37 @@ async function result(r: Experiment, data: AppData, signal: AbortSignal) {
   el('section.note li').textContent =
     `· 변경 전후 같은 길이(${daysBetween(after.startDate, after.endDate) + 1}일)를 비교했어요.`;
   // The reporting API supplies two complete periods, not weekly points.
-  const chart = el('[data-bars]').closest('section')!;
+  const panels = el('[data-chart]');
+  const chart = panels.closest('section')!;
   el<HTMLAnchorElement>('a[href="baseline.html"]').href = recordUrl('baseline', r.id);
   chart.querySelector('h2')!.textContent = name + ' 주문';
   chart.querySelector('.text-xs')!.lastChild!.textContent = '메뉴 주문(건)';
   const highest = Math.max(1, before.targetOrders, after.targetOrders);
   const step = Math.max(1, Math.ceil(highest / 5)),
     max = step * 5;
-  el('[data-yaxis]').innerHTML = Array.from(
+  const ticks = Array.from(
     { length: 6 },
     (_, i) => `<span class="leading-none">${fmt.format((5 - i) * step)}</span>`,
   ).join('');
-  const bars = [
-    ['변경 전', before.targetOrders],
-    ['변경 후', after.targetOrders],
-  ] as const;
-  el('[data-bars]').innerHTML =
+  const guides =
     Array.from(
       { length: 5 },
       (_, i) =>
         `<span class="pointer-events-none absolute inset-x-0 border-t border-dashed border-line-light" style="top:${i * 20}%"></span>`,
-    ).join('') +
-    '<span class="absolute inset-x-0 bottom-0 border-t border-line"></span>' +
-    bars
-      .map(
-        ([l, v]) =>
-          `<div class="bar-col relative z-10" title="${l} ${fmt.format(v)}건"><div class="bar" style="height:${(v / max) * 100}%"></div></div>`,
-      )
-      .join('');
-  el('[data-xaxis]').innerHTML = bars
-    .map(
-      ([l]) => `<span class="flex-1 py-3 text-center text-[13px] font-medium text-sub">${l}</span>`,
-    )
+    ).join('') + '<span class="absolute inset-x-0 bottom-0 border-t border-line"></span>';
+  const periods = [
+    ['변경 전', before],
+    ['변경 후', after],
+  ] as const;
+  panels.innerHTML = periods
+    .map(([label, point]) => {
+      const count = fmt.format(point.targetOrders) + '건';
+      return `<figure class="min-w-0"><figcaption class="mb-4 text-sm font-semibold text-body">${label}</figcaption>
+      <div class="flex"><div class="flex h-[240px] w-10 flex-col justify-between pr-3 text-right text-[13px] text-sub" aria-hidden="true">${ticks}</div>
+      <div class="relative flex h-[240px] flex-1 items-end" role="img" aria-label="${label} ${count}">${guides}
+        <div class="bar-col relative z-10" title="${label} ${count}"><div class="bar" style="height:${(point.targetOrders / max) * 100}%"></div></div></div></div>
+      <p class="py-3 pl-10 text-center text-[13px] font-medium text-sub">${esc(period(point.startDate, point.endDate))} · ${count}</p></figure>`;
+    })
     .join('');
   nextOptions(r);
 }

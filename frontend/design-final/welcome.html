@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>trylog · 내가 바꾼 장사, 얼마나 달라졌을까?</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="home" data-ai="open" data-ai-hints="center">
+  <header data-topbar="guest"></header>
+
+  <div class="px-14 pb-16 pt-8">
+    <main class="mx-auto w-full max-w-container min-w-0">
+      <!-- 배너 -->
+      <section class="flex min-h-[308px] items-stretch overflow-hidden rounded-[32px] bg-[#a3d3f3]">
+        <div class="flex flex-none flex-col justify-center py-14 pl-[60px] pr-8">
+          <h1 class="text-[30px] font-bold leading-[48px] text-heading">돈 안들이고,<br>오늘 뭐 하나 바꿔볼까요?</h1>
+          <p class="mt-3 text-base text-sub">내가 바꾼 장사, 얼마나 달라졌을까?</p>
+          <a href="explore.html?free=1" class="btn btn-lg btn-neutral mt-12 self-start border-white">0원으로 해볼 일 보기</a>
+        </div>
+        <!-- image area: 배너 이미지 (630×308) -->
+        <img src="assets/img/banner.svg" alt="" class="ml-auto min-w-0 max-w-[630px] flex-1 object-cover object-left" width="630" height="308">
+      </section>
+
+      <section class="mt-20">
+        <div class="flex items-end justify-between">
+          <div><h2 class="section-title">오늘 바로 시작할 수 있는 일</h2><p class="mt-1 text-sm text-sub">준비 없이 오늘부터 해볼 수 있어요.</p></div>
+          <a href="explore.html" class="more-link">전체 보기 <span data-icon="chevron-right" data-size="16"></span></a>
+        </div>
+        <div class="mt-5 grid grid-cols-3 gap-6" data-today></div>
+      </section>
+
+      <section class="mt-20">
+        <div class="flex items-center justify-between"><h2 class="section-title">0원으로 할 수 있는 일</h2>
+          <a href="explore.html?free=1" class="more-link">전체 보기 <span data-icon="chevron-right" data-size="16"></span></a></div>
+        <div class="mt-5 grid grid-cols-3 gap-6" data-free></div>
+      </section>
+
+      <div class="mt-20 grid grid-cols-2 gap-4">
+        <section class="card p-6">
+          <h2 class="section-title">앞으로 7일 예상매출</h2>
+          <p class="mt-1 text-sm text-sub">판매 자료를 올리면 다음 7일 매출을 미리 볼 수 있어요.</p>
+          <a href="login.html" class="more-link mt-6">판매 자료 올리기 <span data-icon="chevron-right" data-size="16"></span></a>
+        </section>
+        <section class="card p-6">
+          <h2 class="section-title">동네 가게들은 뭘 해봤을까?</h2>
+          <p class="mt-1 text-sm text-sub">마포구 분식집들이 해본 시도 12가지</p>
+          <a href="explore.html" class="more-link mt-6">동네 사례 보기 <span data-icon="chevron-right" data-size="16"></span></a>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-chat.js"></script>
+  <script>
+    const { $, ideaCard } = App;
+    const pick = ids => ids.map(id => ideaCard(TRYLOG.ideas.find(i => i.id === id))).join('');
+    $('[data-today]').innerHTML = pick(['i6', 'i4', 'i5']);
+    $('[data-free]').innerHTML = pick(['i1', 'i7', 'i3']);
+    App.hydrateIcons();
+  </script>
+</body>
+</html>

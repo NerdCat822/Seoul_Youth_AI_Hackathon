@@ -7,7 +7,7 @@ interface DailySales {
   date: string;
   expected: number | null;
 }
-interface DailyWeather {
+export interface DailyWeather {
   date: string;
   averageTempC: number | null;
   precipitationMm: number | null;
@@ -22,6 +22,15 @@ const shortDate = new Intl.DateTimeFormat('ko-KR', {
 
 export function upcomingDates(today: string) {
   return Array.from({ length: 7 }, (_, index) => addDays(today, index + 1));
+}
+
+export function weatherLabel(day?: DailyWeather) {
+  const parts = [];
+  if (day?.averageTempC != null && Number.isFinite(day.averageTempC))
+    parts.push('평균 ' + amount.format(day.averageTempC) + '°C');
+  if (day?.precipitationMm != null && Number.isFinite(day.precipitationMm))
+    parts.push('강수 ' + amount.format(day.precipitationMm) + 'mm');
+  return parts.join('\n');
 }
 
 export async function loadWeekSales(dates: string[], signal: AbortSignal): Promise<DailySales[]> {
@@ -61,7 +70,6 @@ function dayTasks(date: string, records: Experiment[]) {
 export function mountHomeWeek(section: HTMLElement, data: AppData, signal: AbortSignal) {
   const dates = upcomingDates(data.overview.today);
   const { icon } = window.App;
-  section.parentElement!.prepend(section);
   section.className = 'card week-summary';
   section.dataset.weekSummary = '';
   section.setAttribute('aria-labelledby', 'week-title');
@@ -142,13 +150,8 @@ export function mountHomeWeek(section: HTMLElement, data: AppData, signal: Abort
       const weather = new Map(rows.map((row) => [row.date, row]));
       for (const cell of cells) {
         const day = weather.get(cell.dataset.weekDate!);
-        const lines = [];
-        if (day?.averageTempC != null && Number.isFinite(day.averageTempC))
-          lines.push('평균 ' + amount.format(day.averageTempC) + '°C');
-        if (day?.precipitationMm != null && Number.isFinite(day.precipitationMm))
-          lines.push('강수 ' + amount.format(day.precipitationMm) + 'mm');
         cell.querySelector<HTMLElement>('[data-week-weather]')!.textContent =
-          lines.join('\n') || '예보 자료 없음';
+          weatherLabel(day) || '예보 자료 없음';
       }
     })
     .catch(() => unavailable('[data-week-weather]'));

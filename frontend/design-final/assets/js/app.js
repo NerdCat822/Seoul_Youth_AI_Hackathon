@@ -18,16 +18,17 @@
     const guest = host.dataset.topbar === 'guest';
     const minimal = host.dataset.topbar === 'minimal';
     const active = document.body.dataset.nav || '';
-    const homeHref = guest ? 'home-guest.html' : 'home.html';
+    // 로그인 전(guest · minimal)은 로그인 전 홈(welcome.html)으로, 로그인 후는 내 가게 홈으로
+    const homeHref = guest || minimal ? 'welcome.html' : 'home.html';
     const tabs = minimal ? '' : `<nav class="absolute left-1/2 top-4 flex -translate-x-1/2 gap-2" aria-label="주요 메뉴">${NAV.map(([k, l, h]) =>
       `<a href="${guest && k === 'home' ? homeHref : h}" class="block border-b-2 pb-1.5 ${active === k ? 'border-brand' : 'border-transparent'}" ${active === k ? 'aria-current="page"' : ''}>
          <span class="block rounded-lg px-4 py-[9px] text-base font-medium leading-6 hover:bg-surface-2 ${active === k ? 'text-brand-text' : 'text-heading'}">${l}</span></a>`).join('')}</nav>`;
     const unread = D.notifications.filter(n => n.unread).length;
     const right = minimal ? '' : guest
-      ? `<a href="login.html" class="btn btn-sm bg-heading text-white hover:bg-black">로그인</a>`
+      ? `<div class="flex items-center gap-4">${chatBtn()}<a href="login.html" class="btn btn-sm bg-heading text-white hover:bg-black">로그인</a></div>`
       : `<div class="flex items-center gap-6">
           <div class="flex items-center gap-3">
-            <a href="ai.html" class="icon-btn h-8 w-8 text-[#9ea3ad] hover:text-heading" aria-label="AI 대화" title="AI 대화">${icon('chat', 24)}</a>
+            ${chatBtn()}
             <div class="relative">
               <button type="button" class="icon-btn relative h-8 w-8 text-[#9ea3ad] hover:text-heading" data-pop="notif" aria-haspopup="true" aria-expanded="false" aria-label="알림">
                 ${icon('bell', 24)}<span data-unread-dot class="absolute right-1 top-1 h-2 w-2 rounded-full bg-error ring-2 ring-white" ${unread ? '' : 'hidden'}></span>
@@ -57,6 +58,13 @@
     host.innerHTML = `<div class="relative flex h-16 items-center gap-2 px-14">
         <a href="${homeHref}" aria-label="trylog 홈"><img src="assets/img/logo.svg" alt="trylog" width="92" height="28" class="h-7 w-[92px]"></a>
         <div class="flex-1"></div>${tabs}${right}</div>`;
+  }
+
+  // AI 대화 버튼: 오른쪽 분할 패널을 열고 닫음 (패널이 없는 ai.html에서는 전체 화면 대화로 이동)
+  function chatBtn() {
+    if (document.body.dataset.ai === 'off') return `<a href="ai.html" class="icon-btn h-8 w-8 text-heading" aria-label="AI 대화" aria-current="page">${icon('chat', 24)}</a>`;
+    return `<div class="relative"><button type="button" class="icon-btn h-8 w-8 text-[#9ea3ad] hover:text-heading" data-ai-toggle aria-controls="ai-panel" aria-expanded="false" aria-label="AI 대화 열기·닫기" title="AI 대화">${icon('chat', 24)}</button>
+      <span class="ai-tip" role="status" data-ai-tip hidden>여기서 언제든 대화를 다시 시작할 수 있어요</span></div>`;
   }
 
   function notifPanel() {
@@ -124,7 +132,7 @@
   function closeModal() { if (modalEl) { modalEl.remove(); modalEl = null; lastFocus && lastFocus.focus && lastFocus.focus(); } }
   function confirmLogout() {
     openModal({ title: '로그아웃할까요?', body: '다시 로그인하면 기록과 판매 자료를 그대로 볼 수 있어요.', confirm: '로그아웃',
-      onConfirm: () => (location.href = 'login.html') });
+      onConfirm: () => (location.href = 'welcome.html?toast=' + encodeURIComponent('로그아웃했어요.')) });
   }
 
   /* ---------- 토스트 ---------- */
@@ -155,7 +163,7 @@
   function ideaCard(i, { compact = false } = {}) {
     const c = D.categories[i.cat];
     return `<a href="idea.html?id=${i.id}" class="idea-card">
-      ${compact ? '' : `<div class="thumb ${c.img}"></div>`}
+      ${compact ? '' : `<img class="thumb ${c.img}" src="${i.img}" alt="${esc(i.title)} 예시 이미지" loading="lazy" width="380" height="160">`}
       <div class="body"><span class="cat ${c.cls} self-start">${c.label}</span>
         <p class="mt-3 text-base font-semibold leading-6">${esc(i.title)}</p>
         <p class="text-sm leading-5 text-sub">${esc(i.desc)}</p>

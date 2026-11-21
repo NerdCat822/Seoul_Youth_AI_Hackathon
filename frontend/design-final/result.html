@@ -39,11 +39,8 @@
             <h2 class="text-base font-semibold">주별 세트 메뉴 주문</h2><span class="flex-1"></span>
             <span class="flex items-center gap-1 text-xs text-body"><i class="h-3 w-3 rounded-sm bg-brand"></i>세트 메뉴 주문(건)</span>
           </div>
-          <div class="flex">
-            <div class="flex h-[284px] w-[60px] flex-col justify-between pr-3 text-[13px] text-sub" data-yaxis></div>
-            <div class="relative flex h-[284px] flex-1 items-end" data-bars></div>
-          </div>
-          <div class="flex pl-[60px]" data-xaxis></div>
+          <!-- 변경 전 · 변경 후를 나눠서 같은 눈금으로 비교 -->
+          <div class="grid grid-cols-2 gap-10" data-chart></div>
           <div class="mt-2 flex justify-end"><a href="baseline.html" class="more-link">일별 매출을 예상 기준선과 비교해 보기 <span data-icon="chevron-right" data-size="16"></span></a></div>
         </section>
 
@@ -75,6 +72,7 @@
   <script src="assets/js/icons.js"></script>
   <script src="assets/js/data.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-chat.js"></script>
   <script>
     const { $, $$, icon, esc, won, openModal } = App;
     const R = TRYLOG.result, b = R.before, a = R.after;
@@ -97,11 +95,19 @@
       : `세트 메뉴 주문과 비중이 모두 늘었어요.`;
 
     const max = 35, steps = [35, 30, 25, 20, 15, 10, 5, 0];
-    $('[data-yaxis]').innerHTML = steps.map(s => `<span class="leading-none">${s}</span>`).join('');
-    $('[data-bars]').innerHTML = steps.slice(0, -1).map((s, i) => `<span class="pointer-events-none absolute inset-x-0 border-t border-dashed border-line-light" style="top:${i / 7 * 100}%"></span>`).join('')
-      + `<span class="absolute inset-x-0 bottom-0 border-t border-line"></span>`
-      + R.weekly.map((w, i) => `<div class="bar-col relative z-10" title="${w.label} ${w.v}건"><div class="bar" style="height:${w.v / max * 100}%"></div></div>`).join('');
-    $('[data-xaxis]').innerHTML = R.weekly.map(w => `<span class="flex-1 py-3 text-center text-[13px] font-medium text-sub">${w.label}</span>`).join('');
+    const group = (label, weeks) => `<figure>
+        <figcaption class="mb-4 text-sm font-semibold text-body">${label}</figcaption>
+        <div class="flex">
+          <div class="flex h-[240px] w-10 flex-col justify-between pr-3 text-right text-[13px] text-sub" aria-hidden="true">${steps.map(s => `<span class="leading-none">${s}</span>`).join('')}</div>
+          <div class="relative flex h-[240px] flex-1 items-end" role="img" aria-label="${label} ${weeks.map((w, i) => `${i + 1}주차 ${w.v}건`).join(', ')}">
+            ${steps.slice(0, -1).map((s, i) => `<span class="pointer-events-none absolute inset-x-0 border-t border-dashed border-line-light" style="top:${i / 7 * 100}%"></span>`).join('')}
+            <span class="absolute inset-x-0 bottom-0 border-t border-line"></span>
+            ${weeks.map((w, i) => `<div class="bar-col relative z-10" title="${label} ${i + 1}주차 ${w.v}건"><div class="bar" style="height:${w.v / max * 100}%"></div></div>`).join('')}
+          </div>
+        </div>
+        <div class="flex pl-10">${weeks.map((w, i) => `<span class="flex-1 py-3 text-center text-[13px] font-medium text-sub">${i + 1}주차</span>`).join('')}</div>
+      </figure>`;
+    $('[data-chart]').innerHTML = group('변경 전', R.weekly.slice(0, 2)) + group('변경 후', R.weekly.slice(2));
 
     // 다음에 해볼 일: 고른 항목에 맞춰 버튼 문구와 이동 위치가 바뀜
     const opts = [
