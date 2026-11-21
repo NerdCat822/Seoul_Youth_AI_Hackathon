@@ -76,6 +76,9 @@ class Settings:
     stt_model: str
     stt_timeout: float
     stt_max_bytes: int
+    tts_model: str
+    tts_voice: str
+    tts_timeout: float
 
     @property
     def has_llm_key(self) -> bool:
@@ -114,4 +117,8 @@ def get_settings() -> Settings:
         stt_model=os.getenv("TRYLOG_STT_MODEL", "gpt-4o-mini-transcribe").strip(),
         stt_timeout=float(os.getenv("TRYLOG_STT_TIMEOUT", "20")),
         stt_max_bytes=int(os.getenv("TRYLOG_STT_MAX_BYTES", str(5 * 1024 * 1024))),
+        # 답을 소리로 읽기(OpenAI 음성 합성). 같은 OPENAI_API_KEY 를 쓴다.
+        tts_model=os.getenv("TRYLOG_TTS_MODEL", "gpt-4o-mini-tts").strip(),
+        tts_voice=os.getenv("TRYLOG_TTS_VOICE", "coral").strip(),
+        tts_timeout=float(os.getenv("TRYLOG_TTS_TIMEOUT", "20")),
     )

@@ -162,3 +162,28 @@ const { text } = await transcribe(await recordOnce());
 
 - 로그인 없이 부르면 401인 것을 확인했습니다.
 - Safari 녹음(`audio/mp4`)과 실제 사람 목소리는 아직 시험하지 않았습니다.
+
+## 답 읽기(TTS)와 대화창의 음성 대화
+
+에이전트의 답을 소리로 들려주는 API도 있습니다. STT와 같은 OpenAI 키를 씁니다.
+
+```
+POST /api/v1/agent/tts
+Content-Type: application/json
+Cookie: JSESSIONID=...
+
+{ "text": "이렇게 적어 둘게요. 맞으면 저장이라고 말씀해 주세요." }
+```
+
+- 응답: `audio/mpeg`(mp3) 바이트. 모델 `gpt-4o-mini-tts`, 목소리 `coral`
+- 글은 1000자 이하. 줄바꿈과 따옴표 같은 화면용 기호는 덜어 내고 읽습니다
+- 오류는 STT와 같은 형식입니다(401, 400 `VALIDATION_ERROR`, 503 `TTS_UNAVAILABLE`·`TTS_BUSY`, 502 `UPSTREAM_ERROR`)
+- 화면에서는 `api.ts`의 `synthesizeSpeech(text)`가 Blob으로 받습니다
+
+대화창(`ChatPanel`)은 두 API를 이어 씁니다.
+
+1. 마이크를 한 번 누르면 녹음을 시작합니다.
+2. 말을 시작한 뒤 1초 동안 조용하면 말이 끝난 것으로 보고 녹음을 마칩니다(`VoiceInput`의 `SILENCE_MS`). 8초 동안 말소리가 없으면 그만둡니다.
+3. 전사한 글을 바로 에이전트에 보냅니다(`/agent/chat`).
+4. 에이전트의 답을 `/agent/tts`로 받아 소리로 읽습니다. 제안 카드가 있으면 "1번, …"처럼 카드 제목도 읽습니다.
+5. 읽는 중에 마이크를 다시 누르거나 "그만 듣기"를 누르면 읽기를 멈춥니다.

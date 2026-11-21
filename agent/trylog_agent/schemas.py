@@ -94,6 +94,13 @@ class HealthResponse(BaseModel):
     dateMatch: bool
     sttReady: bool = False
     sttModel: Optional[str] = None
+    ttsReady: bool = False
+    ttsModel: Optional[str] = None
+    ttsVoice: Optional[str] = None
+
+
+class TtsRequest(BaseModel):
+    text: Optional[str] = None
 
 
 class SttResponse(BaseModel):

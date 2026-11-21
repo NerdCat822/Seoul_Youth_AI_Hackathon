@@ -7,6 +7,7 @@ import uuid
 from collections import OrderedDict
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi.responses import Response
 from fastapi.concurrency import run_in_threadpool
 from langgraph.types import Command
 
@@ -14,9 +15,9 @@ from . import llm
 from .graph.build import chat_graph, draft_graph, explain_graph
 from .graph.nodes import get_menus
 from .schemas import (ApiError, ChatRequest, ChatResponse, DraftRequest, DraftResponse, ExplainResponse, HealthResponse,
-                      SttResponse)
+                      SttResponse, TtsRequest)
 from .settings import get_settings
-from .tools import login, ml, rules, stt
+from .tools import login, ml, rules, stt, tts
 from .tools.spring import SpringError, SpringNotFound, get_spring
 
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
@@ -109,6 +110,7 @@ def health() -> dict:
         "springToday": spring_today, "mlReady": ml.ml_ready(), "mlBaseToday": ml_today,
         "dateMatch": bool(spring_today) and spring_today == ml_today,
         "sttReady": stt.is_ready(), "sttModel": settings.stt_model,
+        "ttsReady": tts.is_ready(), "ttsModel": settings.tts_model, "ttsVoice": settings.tts_voice,
     }
 
 
@@ -127,6 +129,18 @@ async def speech_to_text(audio: UploadFile = File(...)) -> dict:
     except stt.SttError as error:
         raise ApiError(error.status, error.code, error.message) from None
     return {"text": result.text, "model": result.model, "elapsedMs": result.elapsed_ms}
+
+
+@router.post("/tts", dependencies=[Depends(require_login)], response_class=Response,
+             responses={200: {"content": {"audio/mpeg": {}}, "description": "읽은 소리(mp3)"}})
+async def text_to_speech(body: TtsRequest) -> Response:
+    """글을 소리(mp3)로 바꾼다. 로그인한 가게만 쓸 수 있다(OpenAI 요금이 든다)."""
+    try:
+        speech = await run_in_threadpool(tts.synthesize, body.text)
+    except tts.TtsError as error:
+        raise ApiError(error.status, error.code, error.message) from None
+    return Response(content=speech.audio, media_type=speech.media_type,
+                    headers={"Cache-Control": "no-store", "X-Elapsed-Ms": str(speech.elapsed_ms)})
 
 
 @router.post("/draft", response_model=DraftResponse, dependencies=[Depends(require_login)])

@@ -36,11 +36,13 @@ export async function request<T>(
   path: string,
   options: RequestInit = {},
   timeoutMs = 10000,
+  /** 'blob'이면 소리 같은 바이너리 응답을 그대로 돌려준다. */
+  as: 'json' | 'blob' = 'json',
 ): Promise<T> {
   let response: Response;
   const token = csrfToken;
   const headers = new Headers(options.headers);
-  headers.set('Accept', 'application/json');
+  headers.set('Accept', as === 'blob' ? '*/*' : 'application/json');
   if (typeof options.body === 'string') headers.set('Content-Type', 'application/json');
   if (options.method && !['GET', 'HEAD', 'OPTIONS'].includes(options.method.toUpperCase())) {
     headers.set('X-CSRF-TOKEN', token);
@@ -87,7 +89,7 @@ export async function request<T>(
       response.status,
     );
   }
-  return response.json() as Promise<T>;
+  return (as === 'blob' ? response.blob() : response.json()) as Promise<T>;
 }
 
 export function getSession(signal?: AbortSignal): Promise<AuthSession> {
@@ -130,6 +132,16 @@ export function sendChat(threadId: string | null, message: string): Promise<Agen
     method: 'POST',
     body: JSON.stringify({ threadId, message }),
   });
+}
+
+/** 에이전트의 답을 소리(mp3)로 받는다. */
+export function synthesizeSpeech(text: string, signal?: AbortSignal): Promise<Blob> {
+  return request<Blob>(
+    '/agent/tts',
+    { method: 'POST', body: JSON.stringify({ text }), signal },
+    30000,
+    'blob',
+  );
 }
 
 export function transcribeAudio(audio: Blob, signal: AbortSignal) {

@@ -3,6 +3,7 @@ import type { FormEvent, KeyboardEvent } from 'react';
 import { ApiError, saveChatExchange, sendChat } from '../api';
 import { formatDate } from '../lib/dates';
 import { categories, difficulties } from '../lib/labels';
+import { onSpeakingChange, speak, stopSpeaking, unlockAudio } from '../lib/speech';
 import type { AgentChatResponse, Category, ChatCard, Experiment } from '../types';
 import { Icon } from './Icon';
 import { VoiceInput } from './VoiceInput';
@@ -29,6 +30,15 @@ const EXAMPLES = [
   '오늘부터 2주 동안 쌀떡볶이에 추천 표시를 붙였어',
 ];
 const won = new Intl.NumberFormat('ko-KR');
+
+/** 답을 소리로 읽을 글. 화면의 글에 카드 제목을 더한다(카드는 눈으로만 보이므로). */
+function speechText(message: PanelMessage): string {
+  const parts = [message.text, ...message.notices];
+  if (message.pick)
+    message.cards.forEach((card, index) => parts.push(`${index + 1}번, ${card.title}.`));
+  else if (message.cards[0]) parts.push(`${message.cards[0].title}. ${message.cards[0].summary}`);
+  return parts.filter(Boolean).join('\n');
+}
 
 function restore(key: string): { threadId: string | null; messages: PanelMessage[] } {
   try {
@@ -110,16 +120,29 @@ export function ChatPanel({
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
+  // 말로 한 질문. 녹음이 끝나 손이 비면 바로 보내고, 답은 소리로 읽는다.
+  const [spoken, setSpoken] = useState<string | null>(null);
+  const [speaking, setSpeaking] = useState(false);
   const draftLength = Array.from(input.trim()).length;
   const busy = sending || voiceBusy;
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nextKey = useRef(initial.messages.reduce((max, item) => Math.max(max, item.key), 0) + 1);
 
-  const addTranscript = useCallback((text: string) => {
-    setInput((current) => current + (current && !/\s$/.test(current) ? ' ' : '') + text);
-    inputRef.current?.focus();
+  const addTranscript = useCallback((text: string) => setSpoken(text), []);
+  const voiceBusyChange = useCallback((value: boolean) => {
+    if (value) {
+      // 마이크를 누르면 읽던 답을 멈춘다. 누른 순간에 소리 재생 권한도 얻어 둔다(휴대폰 브라우저).
+      stopSpeaking();
+      unlockAudio();
+    }
+    setVoiceBusy(value);
   }, []);
+  useEffect(() => onSpeakingChange(setSpeaking), []);
+  useEffect(() => {
+    if (!open) stopSpeaking();
+  }, [open]);
+  useEffect(() => () => stopSpeaking(), []);
 
   useEffect(() => {
     try {
@@ -133,9 +156,10 @@ export function ChatPanel({
     if (box) box.scrollTop = box.scrollHeight;
   }, [messages, sending, open]);
 
-  async function send(text: string) {
+  async function send(text: string, voice = false) {
     const message = text.trim();
     if (!message || busy || Array.from(message).length > MESSAGE_LIMIT) return;
+    stopSpeaking();
     setInput('');
     setSending(true);
     const title = (messages.find((item) => item.role === 'USER')?.text ?? message).slice(0, 80);
@@ -155,16 +179,15 @@ export function ChatPanel({
               .join('\n')
           : reply.reply;
       setThreadId(reply.threadId);
-      setMessages((current) => [
-        ...current,
-        {
-          key: nextKey.current++,
-          role: 'ASSISTANT',
-          text: replyText,
-          notices: reply.notices,
-          ...extras,
-        },
-      ]);
+      const answer: PanelMessage = {
+        key: nextKey.current++,
+        role: 'ASSISTANT',
+        text: replyText,
+        notices: reply.notices,
+        ...extras,
+      };
+      setMessages((current) => [...current, answer]);
+      if (voice) speak(speechText(answer)).catch(() => undefined);
       if (reply.status === 'SAVED' && reply.experiment) onSaved(reply.experiment);
       // 대화 내역에 남긴다. 저장에 실패해도 대화는 이어간다.
       saveChatExchange(reply.threadId, {
@@ -183,26 +206,34 @@ export function ChatPanel({
         ],
       }).catch(() => undefined);
     } catch (reason) {
-      setMessages((current) => [
-        ...current,
-        {
-          key: nextKey.current++,
-          role: 'ASSISTANT',
-          text:
-            reason instanceof ApiError
-              ? reason.message
-              : '지금은 답하기 어려워요. 잠시 뒤 다시 말씀해 주세요.',
-          cards: [],
-          options: [],
-          notices: [],
-          failed: true,
-        },
-      ]);
+      const failure: PanelMessage = {
+        key: nextKey.current++,
+        role: 'ASSISTANT',
+        text:
+          reason instanceof ApiError
+            ? reason.message
+            : '지금은 답하기 어려워요. 잠시 뒤 다시 말씀해 주세요.',
+        cards: [],
+        options: [],
+        notices: [],
+        failed: true,
+      };
+      setMessages((current) => [...current, failure]);
+      if (voice) speak(failure.text).catch(() => undefined);
     } finally {
       setSending(false);
       inputRef.current?.focus();
     }
   }
+
+  // 녹음이 끝나 마이크가 놓이면 말한 내용을 바로 보낸다. 입력창에 써 둔 글이 있으면 앞에 붙인다.
+  useEffect(() => {
+    if (spoken === null || busy) return;
+    const message = [input.trim(), spoken].filter(Boolean).join(' ');
+    setSpoken(null);
+    void send(message, true);
+    // send 와 input 은 이 순간의 값만 쓰면 된다.
+  }, [spoken, busy]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -394,8 +425,16 @@ export function ChatPanel({
             <VoiceInput
               disabled={sending}
               onTranscript={addTranscript}
-              onBusyChange={setVoiceBusy}
+              onBusyChange={voiceBusyChange}
             />
+          )}
+          {speaking && (
+            <div className="voice-feedback">
+              <span role="status">답을 소리로 읽고 있어요.</span>
+              <button type="button" onClick={stopSpeaking}>
+                그만 듣기
+              </button>
+            </div>
           )}
           <button
             type="submit"

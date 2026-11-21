@@ -44,6 +44,7 @@ Docker에서는 이 저장소의 Spring에 맞춰 `TRYLOG_SPRING_URL=http://tryl
 | POST `/api/v1/agent/experiments/{id}/explain` | 보고서 숫자로 결과 설명과 다음 시도 제안 |
 | GET `/api/v1/agent/experiments/{id}/forecast` | Spring 시도를 표본 시도에 맞춰 예측 조회 |
 | POST `/api/v1/agent/stt` multipart `audio` | 녹음한 말을 한국어 글로 바꿈 → `{"text","model","elapsedMs"}` |
+| POST `/api/v1/agent/tts` `{"text"}` | 글을 소리로 읽음 → `audio/mpeg`(mp3). 1000자 이하 |
 | `/api/v1/ml/...` | 서재원의 예측 경로 5개 |
 
 `health`를 뺀 에이전트 경로는 로그인한 가게만 쓸 수 있다. 화면이 보낸 세션 쿠키와 `X-CSRF-TOKEN`을 Spring 호출에 그대로 넘겨, Spring이 그 가게의 요청으로 처리한다. 대상 메뉴도 로그인한 가게의 메뉴(Spring `/menus`)에서 찾는다. 로그인하지 않은 요청은 401이다.
@@ -94,5 +95,8 @@ curl -X POST http://127.0.0.1:7500/api/v1/agent/stt -H "Cookie: JSESSIONID=..." 
 | `TRYLOG_STT_MODEL` | `gpt-4o-mini-transcribe` | 음성 전사 모델 |
 | `TRYLOG_STT_TIMEOUT` | `20` | 음성 전사 한 번의 제한 시간(초) |
 | `TRYLOG_STT_MAX_BYTES` | `5242880` | 받을 녹음 파일의 최대 크기(5MB). 넘으면 413 |
+| `TRYLOG_TTS_MODEL` | `gpt-4o-mini-tts` | 답 읽기 모델 |
+| `TRYLOG_TTS_VOICE` | `coral` | 답 읽기 목소리 |
+| `TRYLOG_TTS_TIMEOUT` | `20` | 답 읽기 한 번의 제한 시간(초) |
 | `TRYLOG_REQUIRE_LOGIN` | `0` | `1`이면 Spring에 로그인을 확인할 수 없을 때 요청을 받지 않는다. 공개 주소에 여는 배포에서 켠다 |
 | `CSV_DIR`, `TRYLOG_ML_DIR` | `ml/data`, `ml` | 자료와 서재원 코드의 위치 |
