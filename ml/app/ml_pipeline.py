@@ -3,6 +3,8 @@ import math
 import os
 from datetime import date, timedelta
 from functools import lru_cache
+from pathlib import Path
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -10,7 +12,9 @@ import lightgbm as lgb
 from sqlalchemy import create_engine, text
 
 DATA_SOURCE = os.getenv("DATA_SOURCE", "csv").lower()
-CSV_DIR = os.getenv("CSV_DIR", r"C:\Users\NICE\Downloads\test")
+ML_ROOT = Path(__file__).resolve().parents[1]
+CSV_DIR = os.getenv("CSV_DIR", str(ML_ROOT.parent / "data"))
+MODEL_PATH = Path(os.getenv("MODEL_PATH", str(ML_ROOT / "models" / "ganum_lgbm.joblib")))
 DB_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+psycopg2://ganum_user:ganum_password@127.0.0.1:5432/ganum",
@@ -28,35 +32,14 @@ FEATURE_COLS = [
     "lag_14",
     "rolling_mean_7",
 ]
-MODEL_VERSION = "lgbm_ganum_v1.2"
-MODEL_PATH = os.getenv(
-    "MODEL_PATH",
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models", "ganum_lgbm.joblib"),
+EXPERIMENT_ACTIONS = (
+    "MENU_BADGE", "SET_BUNDLE", "PRICE_CHANGE", "STORE_SIGNAGE", "LOCAL_PROMO",
+    "HOURS_OPERATION", "MENU_COPY_PHOTO", "DISCOUNT_COUPON",
 )
-
-
-@lru_cache(maxsize=1)
-def load_model_artifact() -> dict:
-    # train_save_model.py가 저장한 모델 묶음을 한 번만 읽어 둔다. API는 학습하지 않고 이 모델만 쓴다.
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(f"모델 파일을 찾을 수 없습니다: {MODEL_PATH}")
-    artifact = joblib.load(MODEL_PATH)
-    if list(artifact["featureCols"]) != FEATURE_COLS:
-        raise RuntimeError(
-            "모델 파일의 입력 변수 구성이 FEATURE_COLS와 다릅니다. train_save_model.py로 다시 저장해 주세요."
-        )
-    return artifact
-
-
-def _select_saved_model(store_id: int, experiment_id: Optional[str] = None) -> dict:
-    # 시도 전용 모델이 있으면 그것을, 없으면 가게 모델을 쓴다.
-    artifact = load_model_artifact()
-    saved = artifact["experimentModels"].get(experiment_id) if experiment_id else None
-    if saved is None:
-        saved = artifact["storeModels"].get(int(store_id))
-    if saved is None:
-        raise KeyError(f"가게({store_id})의 학습된 모델이 모델 파일에 없어요.")
-    return saved
+ACTION_FEATURES = {action: f"action_{action.lower()}" for action in EXPERIMENT_ACTIONS}
+OTHER_ACTION_FEATURE = "action_other"
+EXPERIMENT_FEATURE_COLS = [*FEATURE_COLS, *ACTION_FEATURES.values(), OTHER_ACTION_FEATURE]
+MODEL_VERSION = "lgbm_ganum_v1.3"
 
 
 def _read_csv_checked(filename: str) -> pd.DataFrame:
@@ -69,7 +52,9 @@ def _read_csv_checked(filename: str) -> pd.DataFrame:
 def _load_tables_from_csv() -> dict[str, pd.DataFrame]:
     stores = _read_csv_checked("1_stores.csv")
     menus = _read_csv_checked("2_menus.csv")
-    exps = _read_csv_checked("3_experiments.csv")
+    experiment_file = "experiments.csv" if (Path(CSV_DIR) / "experiments.csv").is_file() else "3_experiments.csv"
+    exps = _read_csv_checked(experiment_file)
+    exps["id"] = exps["id"].astype(str)
     pos = _read_csv_checked("4_pos_orders.csv")
     weather = _read_csv_checked("5_external_weather.csv")
     ingre = _read_csv_checked("6_ingredients.csv")
@@ -140,23 +125,46 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _train_and_validate(pre_df: pd.DataFrame) -> tuple[lgb.LGBMRegressor, int, float, int, float, int]:
+def _with_experiment_features(
+    mart: pd.DataFrame, experiments: list[dict], store_id: int, cutoff: date
+) -> pd.DataFrame:
+    mart = mart.copy()
+    for column in EXPERIMENT_FEATURE_COLS[len(FEATURE_COLS):]:
+        mart[column] = 0
+    for exp in experiments:
+        if int(exp["store_id"]) != store_id or exp["start_date"] >= cutoff:
+            continue
+        column = ACTION_FEATURES.get(exp["action_type"], OTHER_ACTION_FEATURE)
+        active = mart["sales_date"].between(exp["start_date"], exp["end_date"])
+        mart.loc[active, column] = 1
+    return mart
+
+
+def _train_and_validate(pre_df: pd.DataFrame, *, learn_experiments: bool = False) -> tuple[lgb.LGBMRegressor, int, float, int, float, int]:
     valid_df = pre_df[(pre_df["is_missing_or_closed"] == False) & (pre_df["is_forecast"] == False)].copy()
-    feat_df = build_features(valid_df).dropna(subset=["lag_7", "lag_14", "rolling_mean_7"])
+    if learn_experiments:
+        feature_cols = EXPERIMENT_FEATURE_COLS
+        features = build_features(pre_df)
+        feat_df = features.loc[features.index.isin(valid_df.index)]
+        if len(feat_df) < 7:
+            raise ValueError("학습에 필요한 과거 영업일 데이터가 부족합니다 (최소 7일 이상 필요).")
+    else:
+        feature_cols = FEATURE_COLS
+        feat_df = build_features(valid_df).dropna(subset=["lag_7", "lag_14", "rolling_mean_7"])
+        if len(feat_df) < 21:
+            raise ValueError("학습에 필요한 과거 영업일 데이터가 부족합니다 (최소 35일 이상 필요).")
 
-    if len(feat_df) < 21:
-        raise ValueError("학습에 필요한 과거 영업일 데이터가 부족합니다 (최소 35일 이상 필요).")
-
-    val_window = min(14, max(7, len(feat_df) // 5))
+    val_window = min(14, max(7, len(feat_df) // 5), len(feat_df) // 2)
     train_set = feat_df.iloc[:-val_window]
     val_set = feat_df.iloc[-val_window:]
 
-    X_train = train_set[FEATURE_COLS].to_numpy(dtype=float)
+    X_train = train_set[feature_cols].to_numpy(dtype=float)
     y_train = train_set["daily_sales"].to_numpy(dtype=float)
-    X_val = val_set[FEATURE_COLS].to_numpy(dtype=float)
+    X_val = val_set[feature_cols].to_numpy(dtype=float)
     y_val = val_set["daily_sales"].to_numpy(dtype=float)
 
-    baseline_mae, baseline_wape = calc_metrics(y_val, val_set["lag_7"].to_numpy(dtype=float))
+    baseline_values = val_set["lag_7"].fillna(float(y_train.mean()))
+    baseline_mae, baseline_wape = calc_metrics(y_val, baseline_values.to_numpy(dtype=float))
 
     params = {
         "objective": "regression",
@@ -166,6 +174,7 @@ def _train_and_validate(pre_df: pd.DataFrame) -> tuple[lgb.LGBMRegressor, int, f
         "min_data_in_leaf": 4,
         "verbose": -1,
         "random_state": 42,
+        "n_jobs": 1,
     }
     val_model = lgb.LGBMRegressor(**params, n_estimators=80)
     val_model.fit(X_train, y_train)
@@ -176,14 +185,17 @@ def _train_and_validate(pre_df: pd.DataFrame) -> tuple[lgb.LGBMRegressor, int, f
     band_margin = max(int(round(residual_std * 1.28, -3)), 20000)
 
     full_model = lgb.LGBMRegressor(**params, n_estimators=100)
-    full_model.fit(feat_df[FEATURE_COLS].to_numpy(dtype=float), feat_df["daily_sales"].to_numpy(dtype=float))
+    full_model.fit(feat_df[feature_cols].to_numpy(dtype=float), feat_df["daily_sales"].to_numpy(dtype=float))
 
     return full_model, model_mae, model_wape, baseline_mae, baseline_wape, band_margin
 
 
 def _recursive_predict(
-    model: lgb.LGBMRegressor, history_df: pd.DataFrame, target_dates: list[date]
+    model: lgb.LGBMRegressor, history_df: pd.DataFrame, target_dates: list[date],
+    *, baseline_experiments: bool = False,
 ) -> dict[date, int]:
+    if not target_dates:
+        return {}
     sim_df = history_df.sort_values("sales_date").copy()
     sim_df["baseline_series"] = sim_df["daily_sales"].astype(float)
     first_target = min(target_dates)
@@ -216,11 +228,88 @@ def _recursive_predict(
             ]],
             dtype=float,
         )
+        if baseline_experiments:
+            # Expected sales describe the comparison scenario without an active action.
+            x_row = np.pad(x_row, ((0, 0), (0, len(EXPERIMENT_FEATURE_COLS) - len(FEATURE_COLS))))
         pred_val = max(0, int(round(float(model.predict(x_row)[0]), -3)))
         sim_df.loc[idx, "baseline_series"] = float(pred_val)
         preds[d] = pred_val
 
     return preds
+
+
+def _fit_experiment_sales(
+    mart: pd.DataFrame, experiments: list[dict], store_id: int, cutoff: date
+) -> dict:
+    history = mart[(mart["sales_date"] < cutoff) & ~mart["is_forecast"]]
+    history = _with_experiment_features(history, experiments, store_id, cutoff)
+    model, mae, wape, baseline_mae, baseline_wape, band = _train_and_validate(
+        history, learn_experiments=True
+    )
+    return {
+        "model": model,
+        "modelMae": mae,
+        "modelWape": wape,
+        "baselineMae": baseline_mae,
+        "baselineWape": baseline_wape,
+        "bandMargin": band,
+    }
+
+
+@lru_cache(maxsize=1)
+def load_model_artifact() -> dict:
+    """save_model_artifact()가 저장한 모델 묶음을 한 번만 읽는다. API는 이 모델만 쓰고 요청 때 학습하지 않는다."""
+    if not MODEL_PATH.is_file():
+        raise FileNotFoundError(f"모델 파일을 찾을 수 없습니다: {MODEL_PATH}")
+    artifact = joblib.load(MODEL_PATH)
+    if (
+        artifact.get("modelVersion") != MODEL_VERSION
+        or list(artifact.get("featureCols") or []) != EXPERIMENT_FEATURE_COLS
+        or artifact.get("baseToday") != BASE_TODAY_STR
+    ):
+        raise RuntimeError("모델 파일이 이 코드와 맞지 않아요. save_model_artifact()로 다시 저장해 주세요.")
+    return artifact
+
+
+def _saved_experiment_model(experiment_id: str, store_id: int, cutoff: date) -> Optional[dict]:
+    # 시도 전용 모델이 있으면 그것을, 없으면 가게 모델을 쓴다. 요청 때 학습하지 않는다.
+    artifact = load_model_artifact()
+    entry = artifact["experimentModels"].get(experiment_id)
+    if entry and entry["storeId"] == store_id and entry["trainCutoff"] == str(cutoff):
+        return entry
+    return artifact["storeModels"].get(int(store_id))
+
+
+def save_model_artifact(output_path: Path = MODEL_PATH) -> None:
+    tables = _load_tables_from_csv()
+    cutoff = date.fromisoformat(BASE_TODAY_STR)
+    experiments = tables["experiments"].to_dict("records")
+    marts = {
+        int(sid): _build_mart_from_csv(tables, int(sid), cutoff)
+        for sid in tables["stores"]["store_id"]
+    }
+    store_models = {
+        sid: _fit_experiment_sales(mart, experiments, sid, cutoff)
+        for sid, mart in marts.items()
+    }
+    experiment_models = {}
+    for exp in experiments:
+        sid = int(exp["store_id"])
+        exp_cutoff = min(exp["start_date"], cutoff)
+        experiment_models[exp["id"]] = {
+            "storeId": sid,
+            "trainCutoff": str(exp_cutoff),
+            **_fit_experiment_sales(marts[sid], experiments, sid, exp_cutoff),
+        }
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump({
+        "modelVersion": MODEL_VERSION,
+        "featureCols": EXPERIMENT_FEATURE_COLS,
+        "baseToday": BASE_TODAY_STR,
+        "storeModels": store_models,
+        "experimentModels": experiment_models,
+    }, output_path)
 
 
 def run_experiment_forecast(
@@ -231,6 +320,7 @@ def run_experiment_forecast(
     if DATA_SOURCE == "csv":
         tables = _load_tables_from_csv()
         exp_df = tables["experiments"]
+        experiments = exp_df.to_dict("records")
         matched = exp_df[exp_df["id"] == experiment_id]
         if matched.empty:
             raise KeyError(f"시도({experiment_id})를 찾을 수 없어요.")
@@ -319,6 +409,14 @@ def run_experiment_forecast(
                     {"sid": store_id, "eid": experiment_id, "sd": s_date, "ed": e_date},
                 ).mappings().all()
             ]
+            experiments = conn.execute(
+                text("""
+                    SELECT store_id, action_type, start_date, end_date
+                    FROM experiments
+                    WHERE store_id = :sid AND start_date < :cutoff
+                """),
+                {"sid": store_id, "cutoff": min(exp_start, base_today, s_date)},
+            ).mappings().all()
             df_mart = pd.read_sql(
                 text("SELECT * FROM v_daily_sales_mart WHERE store_id = :sid AND sales_date <= :ed ORDER BY sales_date"),
                 conn,
@@ -357,17 +455,16 @@ def run_experiment_forecast(
                     "afterSharePct": round(a_tgt / a_tot * 100, 2) if a_tot > 0 else 0.0,
                 }
 
-    # 시행 전 확정 영업일(오늘 이전)로 미리 학습해 저장한 모델 사용 (요청 시 재학습하지 않음)
-    train_cutoff = min(exp_start, base_today)
-    saved = _select_saved_model(store_id, experiment_id)
-    full_model = saved["model"]
-    model_mae, model_wape = saved["modelMae"], saved["modelWape"]
-    baseline_mae, baseline_wape = saved["baselineMae"], saved["baselineWape"]
-    band_margin = saved["bandMargin"]
-    model_version = load_model_artifact()["modelVersion"]
+    train_cutoff = min(exp_start, base_today, s_date)
+    entry = _saved_experiment_model(experiment_id, store_id, train_cutoff)
+    if entry is None:
+        raise KeyError(f"가게({store_id})의 학습된 모델이 모델 파일에 없어요.")
+    model_mae, model_wape = entry["modelMae"], entry["modelWape"]
+    baseline_mae, baseline_wape = entry["baselineMae"], entry["baselineWape"]
+    band_margin = entry["bandMargin"]
 
     sim_dates = df_mart[df_mart["sales_date"] >= train_cutoff]["sales_date"].tolist()
-    pred_map = _recursive_predict(full_model, df_mart, sim_dates)
+    pred_map = _recursive_predict(entry["model"], df_mart, sim_dates, baseline_experiments=True)
 
     eval_df = df_mart[(df_mart["sales_date"] >= s_date) & (df_mart["sales_date"] <= e_date)].copy()
     missing_days_count = int(eval_df["is_missing_or_closed"].sum())
@@ -408,7 +505,7 @@ def run_experiment_forecast(
                         "exp": item["expectedSales"],
                         "low": item["expectedLower"],
                         "high": item["expectedUpper"],
-                        "ver": model_version,
+                        "ver": MODEL_VERSION,
                         "mae": model_mae,
                         "wape": model_wape,
                     },
@@ -478,7 +575,7 @@ def run_experiment_forecast(
         },
         "modelMeta": {
             "dataSource": DATA_SOURCE,
-            "modelVersion": model_version,
+            "modelVersion": MODEL_VERSION,
             "baselineMethod": "직전 주 같은 요일 예측",
             "validationMetrics": {
                 "modelMae": model_mae,
@@ -592,9 +689,12 @@ def recommend_ingredient_prep(
     if len(future_dates) < horizon_days:
         raise ValueError(f"향후 {horizon_days}일 날씨 예보 데이터가 부족합니다.")
 
-    saved = _select_saved_model(store_id)
-    full_model, model_mae, model_wape = saved["model"], saved["modelMae"], saved["modelWape"]
-    future_preds = _recursive_predict(full_model, df_mart, future_dates)
+    # 저장한 가게 모델로 예측한다(요청 때 학습하지 않는다). 시도가 없는 평소 흐름으로 본다.
+    saved = load_model_artifact()["storeModels"].get(int(store_id))
+    if saved is None:
+        raise KeyError(f"가게({store_id})의 학습된 모델이 모델 파일에 없어요.")
+    model_mae, model_wape = saved["modelMae"], saved["modelWape"]
+    future_preds = _recursive_predict(saved["model"], df_mart, future_dates, baseline_experiments=True)
     predicted_period_sales = sum(future_preds.values())
 
     total_hist_menu_sales = sum(int(r["menu_sales"]) for r in menu_share_rows)
@@ -660,11 +760,10 @@ def recommend_ingredient_prep(
         "forecastPeriod": {"startDate": str(min(future_dates)), "endDate": str(max(future_dates))},
         "predictedTotalSales": predicted_period_sales,
         "dailyForecast": [{"date": str(d), "expectedSales": s} for d, s in sorted(future_preds.items())],
-        "modelMeta": {
-            "dataSource": DATA_SOURCE,
-            "modelVersion": load_model_artifact()["modelVersion"],
-            "valMae": model_mae,
-            "valWape": model_wape,
-        },
+        "modelMeta": {"dataSource": DATA_SOURCE, "modelVersion": MODEL_VERSION, "valMae": model_mae, "valWape": model_wape},
         "recommendations": recommendations,
     }
+
+
+if __name__ == "__main__":
+    save_model_artifact()
