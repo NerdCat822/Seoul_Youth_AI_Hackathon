@@ -51,7 +51,6 @@ export function AddressSearch({
 }) {
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
-  const [composing, setComposing] = useState(false);
   const [active, setActive] = useState(-1);
   const [attempt, setAttempt] = useState(0);
   const [reply, setReply] = useState<SearchReply | null>(null);
@@ -59,7 +58,8 @@ export function AddressSearch({
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
 
-  const query = open && !selected && !composing ? text.trim().normalize('NFC') : '';
+  // 한글 조합 중에도 현재 입력값으로 검색하고, 목록의 키보드 선택만 조합이 끝날 때까지 기다린다.
+  const query = open && !selected ? text.trim().normalize('NFC') : '';
   const searching = query.length >= 2;
   const result = searching && reply?.query === query ? reply : null;
   const suggestions = result?.data?.suggestions ?? [];
@@ -204,12 +204,6 @@ export function AddressSearch({
           aria-activedescendant={suggestions[active] ? 'address-option-' + active : undefined}
           onFocus={() => setOpen(true)}
           onClick={() => setOpen(true)}
-          onCompositionStart={() => {
-            setComposing(true);
-            setActive(-1);
-            setReply(null);
-          }}
-          onCompositionEnd={() => setComposing(false)}
           onChange={(event) => edit(event.target.value)}
           onKeyDown={keyDown}
         />

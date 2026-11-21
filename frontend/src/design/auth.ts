@@ -76,6 +76,13 @@ export async function mountAuth(page: string, session?: AuthSession) {
   const field = (id: string) => document.getElementById(id) as HTMLInputElement;
   if (page === 'login') {
     const form = document.querySelector<HTMLFormElement>('[data-login]')!;
+    const title = form.querySelector('h1')!;
+    const logo = new Image(92, 28);
+    logo.src = 'assets/img/logo.svg';
+    logo.alt = 'trylog';
+    logo.className = 'h-7 w-[92px]';
+    title.classList.add('flex', 'items-center', 'gap-2');
+    title.replaceChildren(logo, ' 시작하기');
     const button = form.querySelector<HTMLButtonElement>('[type=submit]')!;
     form.addEventListener('submit', async (event) => {
       event.preventDefault();

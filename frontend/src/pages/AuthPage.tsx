@@ -213,7 +213,12 @@ export function AuthPage({
     <main className="auth-shell">
       <div className={'auth-card ' + (signup ? 'register-card' : '')}>
         <a className="auth-brand" href="#/login" aria-label="트라이로그 로그인">
-          <i aria-hidden="true">✓</i>Trylog
+          <img
+            src={import.meta.env.BASE_URL + 'design-final/assets/img/logo.svg'}
+            width={92}
+            height={28}
+            alt=""
+          />
         </a>
         <h1>{signup ? '가게 계정 등록' : '우리 가게 로그인'}</h1>
         <p className="auth-lead">
