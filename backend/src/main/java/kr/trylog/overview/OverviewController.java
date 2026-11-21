@@ -50,7 +50,8 @@ public class OverviewController {
         }
         // PostgreSQL checks referenced columns and SELECT privileges even when no rows are requested.
         jdbc.queryForList("""
-                SELECT s.store_id, s.store_name, m.menu2_cd, m.menu2_nm, m.store_id, m.unit_price,
+                SELECT s.store_id, s.store_name, s.login_id, s.password_hash, s.postal_code, s.address,
+                       s.address_detail, m.menu2_cd, m.menu2_nm, m.store_id, m.unit_price,
                        e.id, e.store_id, e.title, e.expm_category, e.action_type, e.target_menu2_cd,
                        e.start_date, e.end_date, e.notes, e.created_at, p.base_date, p.receipt_id,
                        p.store_id, p.menu2_cd, p.price, p.quantity, p.is_refunded,

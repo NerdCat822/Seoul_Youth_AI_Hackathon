@@ -2,6 +2,35 @@ export type Category = 'MENU' | 'OPERATION' | 'MARKETING';
 export type Difficulty = 'EASY' | 'PREPARE' | 'PLAN';
 export type ExperimentStatus = 'PLANNED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED';
 
+export interface AuthSession {
+  authenticated: boolean;
+  storeId: number | null;
+  storeName: string | null;
+  signupEnabled: boolean;
+  csrfToken: string;
+}
+
+export interface StoreAddress {
+  postalCode: string;
+  address: string;
+  megaCd: string;
+  megaNm: string;
+  ctyCd: string;
+  ctyNm: string;
+}
+
+export interface SignupInput extends StoreAddress {
+  loginId: string;
+  password: string;
+  storeName: string;
+  upjong: string;
+  addressDetail: string;
+  openTime: string;
+  closeTime: string;
+  openedDate: string;
+  closedWeekdays: number[];
+}
+
 export interface ReportPeriod {
   startDate: string;
   endDate: string;

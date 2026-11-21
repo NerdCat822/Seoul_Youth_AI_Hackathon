@@ -5,14 +5,14 @@ services:
     command: ["java", "-jar", "/opt/trylog/api.jar"]
     environment:
       SERVER_ADDRESS: 0.0.0.0
+      SERVER_SERVLET_SESSION_COOKIE_SECURE:
       DB_HOST: ${DB_HOST:-postgres-db}
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-hgkim_postgresql}
       DB_USER: ${DB_USER:-nerdcat822}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      TRYLOG_STORE_ID: ${TRYLOG_STORE_ID:-1}
       TRYLOG_DEMO_DATE: ${TRYLOG_DEMO_DATE:-}
-      TRYLOG_ALLOW_WRITES: "false"
+      TRYLOG_ALLOW_WRITES: ${TRYLOG_ALLOW_WRITES:-false}
     volumes:
       - type: bind
         source: ./build/libs/trylog-backend-0.0.1-SNAPSHOT.jar
