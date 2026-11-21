@@ -109,6 +109,12 @@ export function HomePage({ data }: { data: AppData }) {
     <>
       <header className="home-heading">
         <div>
+          {data.overview.upjongNm && (
+            <dl className="store-upjong">
+              <dt>업종</dt>
+              <dd>{data.overview.upjongNm}</dd>
+            </dl>
+          )}
           <h1>
             {firstVisit
               ? '오늘 바로 해볼 수 있는 일부터 시작해 보세요'

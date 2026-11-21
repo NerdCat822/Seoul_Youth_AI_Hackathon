@@ -7,7 +7,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.List;
 import java.util.Map;
+import kr.trylog.overview.OverviewController;
+import kr.trylog.overview.StoreRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -16,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,15 +28,26 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
-@WebMvcTest(AuthController.class)
+@WebMvcTest({AuthController.class, OverviewController.class})
 @Import(SecurityConfig.class)
 class AuthControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired PasswordEncoder passwords;
     @MockitoBean AccountService accounts;
+    @MockitoBean StoreRepository stores;
+    @MockitoBean JdbcTemplate jdbc;
     private static final String PATH = "/api/v1/auth";
     private static final String HEADER = "X-CSRF-TOKEN";
+
+    @Test
+    void signupCanReadUpjongChipsBeforeLoginWhileStoreInformationRequiresLogin() throws Exception {
+        when(stores.upjongs()).thenReturn(List.of(new StoreRepository.Upjong("Q0001", "분식")));
+        mvc.perform(get("/api/v1/upjongs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.upjongs[0].upjongCd").value("Q0001"))
+                .andExpect(jsonPath("$.upjongs[0].upjongNm").value("분식"));
+        mvc.perform(get("/api/v1/overview")).andExpect(status().isUnauthorized());
+    }
 
     @Test
     void storeApiRequiresAuthenticationAndLoginRequiresAnAnonymousSessionToken() throws Exception {
@@ -106,7 +121,7 @@ class AuthControllerTest {
                 .put("loginId", "test_owner").put("password", "test-password").put("storeName", "성수 분식")
                 .put("postalCode", "04782").put("address", "서울특별시 성동구 성수일로 1")
                 .put("megaCd", "11").put("megaNm", "서울특별시").put("ctyCd", "11200").put("ctyNm", "성동구")
-                .put("upjong", "분식").put("openTime", "10:00").put("closeTime", "20:00").put("openedDate", "2026-01-01");
+                .put("upjong", "Q0001").put("openTime", "10:00").put("closeTime", "20:00").put("openedDate", "2026-01-01");
         if (detail != null) form.put("addressDetail", detail);
         var anonymous = mvc.perform(get(PATH + "/session")).andReturn();
         return mvc.perform(post(PATH + "/signup").session((MockHttpSession) anonymous.getRequest().getSession())

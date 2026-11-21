@@ -59,19 +59,26 @@ class AccountService {
         }
         List<Integer> days = form.closedWeekdays() == null ? List.of() : form.closedWeekdays();
         String closed = days.stream().distinct().sorted().map(String::valueOf).collect(Collectors.joining(","));
-        var inserted = db.query("""
-                INSERT INTO seoul_youth_ai_hackathon.stores
-                    (login_id, password_hash, store_name, postal_code, address, address_detail, mega_cd, mega_nm,
-                     cty_cd, cty_nm, upjong, open_time, close_time, opened_date, closed_weekdays)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (login_id) DO NOTHING RETURNING store_id, store_name
-                """, (rs, row) -> new StorePrincipal(rs.getInt(1), rs.getString(2)),
-                normalize(form.loginId()), passwords.encode(form.password()), form.storeName().strip(),
+        return db.query("""
+                WITH selected AS (
+                    SELECT upjong_cd FROM seoul_youth_ai_hackathon.upjongs WHERE upjong_cd = ?
+                ), registered AS (
+                    INSERT INTO seoul_youth_ai_hackathon.stores
+                        (login_id, password_hash, store_name, postal_code, address, address_detail, mega_cd, mega_nm,
+                         cty_cd, cty_nm, upjong, open_time, close_time, opened_date, closed_weekdays)
+                    SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, upjong_cd, ?, ?, ?, ? FROM selected
+                    ON CONFLICT (login_id) DO NOTHING RETURNING store_id, store_name
+                )
+                SELECT registered.store_id, registered.store_name FROM selected LEFT JOIN registered ON true
+                """, rs -> {
+                    if (!rs.next()) throw new InvalidInputException(Map.of("upjong", "목록에서 업종을 선택해주세요."));
+                    Integer storeId = rs.getObject("store_id", Integer.class);
+                    if (storeId == null) throw new DuplicateLoginException();
+                    return new StorePrincipal(storeId, rs.getString("store_name"));
+                }, form.upjong(), normalize(form.loginId()), passwords.encode(form.password()), form.storeName().strip(),
                 form.postalCode(), form.address().strip(), form.addressDetail().strip(),
-                form.megaCd(), form.megaNm().strip(), form.ctyCd(), form.ctyNm().strip(), form.upjong().strip(),
+                form.megaCd(), form.megaNm().strip(), form.ctyCd(), form.ctyNm().strip(),
                 form.openTime(), form.closeTime(), form.openedDate(), closed);
-        if (inserted.isEmpty()) throw new DuplicateLoginException();
-        return inserted.get(0);
     }
 
     private static String normalize(String loginId) {

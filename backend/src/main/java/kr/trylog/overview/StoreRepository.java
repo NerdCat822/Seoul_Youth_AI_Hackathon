@@ -20,6 +20,29 @@ public class StoreRepository {
     }
 
     public record Menu(String menuCode, String menuName, int unitPrice) { }
+    public record Upjong(String upjongCd, String upjongNm) { }
+    public record StoreInfo(int storeId, String storeName, String upjongCd, String upjongNm) { }
+
+    public List<Upjong> upjongs() {
+        return jdbc.query("""
+                SELECT upjong_cd, upjong_nm FROM seoul_youth_ai_hackathon.upjongs
+                ORDER BY display_order, upjong_cd
+                """, (rs, row) -> new Upjong(rs.getString("upjong_cd"), rs.getString("upjong_nm")));
+    }
+
+    public StoreInfo storeInfo() {
+        return jdbc.query("""
+                SELECT s.store_id, s.store_name, u.upjong_cd,
+                       CASE WHEN u.upjong_cd IS NOT NULL THEN u.upjong_nm
+                            WHEN btrim(s.upjong) = '' OR btrim(s.upjong) ~* '^Q[0-9]+$' THEN '업종 미확인'
+                            ELSE s.upjong END AS upjong_nm
+                FROM seoul_youth_ai_hackathon.stores s
+                LEFT JOIN seoul_youth_ai_hackathon.upjongs u ON u.upjong_cd = s.upjong
+                WHERE s.store_id = ?
+                """, (rs, row) -> new StoreInfo(rs.getInt("store_id"), rs.getString("store_name"),
+                rs.getString("upjong_cd"), rs.getString("upjong_nm")), storeId()).stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("설정한 가게를 찾을 수 없어요."));
+    }
 
     public int storeId() {
         return StorePrincipal.require().storeId();

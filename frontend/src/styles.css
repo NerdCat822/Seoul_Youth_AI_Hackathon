@@ -1543,6 +1543,21 @@ select:focus-visible {
   font-size: clamp(24px, 2.4vw, 34px);
   line-height: 1.4;
 }
+.store-upjong {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.store-upjong dt {
+  color: var(--muted);
+}
+.store-upjong dd {
+  margin: 0;
+  font-weight: 650;
+  color: var(--navy);
+}
 .home-heading p {
   margin-top: 8px;
   color: var(--muted);

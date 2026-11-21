@@ -4,12 +4,30 @@ React에서 **가게 회원가입 → 주소 검색 → 가입 → 홈**으로 �
 
 ## 가게 회원가입 준비
 
-가게와 로그인 정보는 `seoul_youth_ai_hackathon.stores` 한 행에 저장한다. DB 소유자가 [가게 마스터 변경 SQL](ops/migrations/001-store-accounts.sql)을 확인하고 서비스 전환 시 대상 DB에 한 번 적용한다. 앱 기동 시 SQL을 자동으로 실행하지 않는다. 기존 가게의 ID와 주문 관계는 유지되며, 기존 행의 로그인 정보는 비어 있다. 공개 회원가입은 새 가게를 생성한다.
+가게와 로그인 정보는 `seoul_youth_ai_hackathon.stores` 한 행에 저장한다. DB 소유자가 배포 전에 [가게 마스터 변경 SQL](ops/migrations/001-store-accounts.sql)과 [업종 마스터 변경 SQL](ops/migrations/002-upjongs.sql)을 순서대로 한 번씩 적용한다. 이미 회원가입 기능을 배포한 DB에서는 두 번째 파일만 적용한다. 기존 가게의 ID와 주문 관계는 유지되며, 공개 회원가입은 새 가게를 생성한다.
 
 DB 소유자로 대상 DB에 접속한 psql에서, 현재 디렉터리가 `backend/`일 때 다음 명령으로 적용한다.
 
 ```text
 \i ops/migrations/001-store-accounts.sql
+\i ops/migrations/002-upjongs.sql
+```
+
+업종 테이블 `seoul_youth_ai_hackathon.upjongs`에는 `upjong.csv`의 코드와 이름 8쌍이 파일 순서대로 들어간다. 가입에서 ‘카페’를 고르면 `stores.upjong`에 `Q0007`이 저장되고, 홈에는 ‘카페’가 표시된다. 서비스 DB 역할에는 새 테이블의 `SELECT` 권한이 필요하다. 역할을 별도로 운영한다면 `DB_USER`에 서비스 역할명을 설정한 환경에서 DB 소유자로 psql을 열고 다음과 같이 부여한다.
+
+```text
+\getenv service_role DB_USER
+GRANT SELECT ON seoul_youth_ai_hackathon.upjongs TO :"service_role";
+```
+
+두 번째 마이그레이션은 CSV와 일치하는 기존 가게의 업종명을 코드로 바꾼다. 목록에 없는 기존 값은 그대로 보존하고 새 가게에는 외래 키를 적용한다. 다음 쿼리로 개별 확인이 필요한 기존 값을 찾을 수 있다. 모두 매핑되면 `ALTER TABLE seoul_youth_ai_hackathon.stores VALIDATE CONSTRAINT stores_upjong_fk`로 기존 행까지 검증한다. 마이그레이션 시 이미 모두 매핑된 경우 이 검증도 자동으로 끝난다.
+
+```sql
+SELECT s.upjong, count(*) AS store_count
+FROM seoul_youth_ai_hackathon.stores AS s
+LEFT JOIN seoul_youth_ai_hackathon.upjongs AS u ON u.upjong_cd = s.upjong
+WHERE u.upjong_cd IS NULL
+GROUP BY s.upjong;
 ```
 
 가입 아이디는 대소문자를 구분하지 않는다. `login_id`에는 소문자로 정규화한 아이디가, `password_hash`에는 임의의 솔트를 사용한 PBKDF2-HMAC-SHA256 해시가 들어간다. `postal_code`, `address`, `address_detail`과 기존 지역·영업 정보 컬럼에는 사용자가 선택하거나 입력한 값이 들어간다.
@@ -76,10 +94,11 @@ npm run dev
 | 메서드 | 경로 | 동작 |
 | --- | --- | --- |
 | GET | `/auth/session` | 로그인 여부·현재 가게·가입 가능 여부·CSRF 토큰 |
-| POST | `/auth/signup` | 로그인 ID·비밀번호·주소·가게 정보를 저장한 뒤 로그인. 중복 ID는 409 |
+| GET | `/upjongs` | 로그인 전에도 조회 가능한 업종 목록. `upjongs` 배열에 `upjongCd`, `upjongNm`을 표시 순서대로 반환 |
+| POST | `/auth/signup` | `upjong`에 목록에서 선택한 코드를 보내 가게를 등록하고 로그인. 미등록 업종은 400, 중복 ID는 409 |
 | POST | `/auth/login`, `/auth/logout` | 세션 로그인 및 로그아웃 |
 | GET | `/health`, `/ready` | 프로세스 생존, DB 이름·스키마·서비스 열과 읽기 권한 검사. DB 준비 실패는 503 |
-| GET | `/overview`, `/menus` | 선택 가게 정보·쓰기 가능 여부 및 메뉴 목록 |
+| GET | `/overview`, `/menus` | 현재 가게의 정보(업종 코드 `upjongCd`·표시 이름 `upjongNm` 포함)와 쓰기 가능 여부, 메뉴 목록 |
 | GET | `/experiments`, `/experiments/{id}` | 선택 가게의 시도 목록·상세. 다른 가게의 ID는 404 |
 | POST | `/experiments` | 제목·분류·행동·메뉴·기간·메모를 검증한 뒤 등록. 재전송은 같은 UUID의 `Idempotency-Key` 사용 |
 | GET | `/experiments/{id}/report/preview` | 저장된 메뉴 또는 `?targetMenuCode=...`로 DB 주문 집계 |
@@ -96,6 +115,10 @@ npm run dev
 영구 보존에는 가게·시도별 최근 성공 결과 하나를 식별하는 키, 메뉴·출처·비교 기간·계산 버전·결과·저장 시각, 그리고 저장 권한이 필요하다. 성공 결과를 단일 트랜잭션으로 교체하고 해당 행의 존재로 완료 상태를 판정할 수 있다. 현재 앱에서 스키마 초기화는 꺼져 있다.
 
 오프라인 대체 모델 학습과 표본 회귀 실행법은 [매출 모델 안내](forecast-tools/README.md)에 있다.
+
+## 업종 선택 실행 검증
+
+격리 PostgreSQL과 Chrome에서 CSV의 8개 코드·이름·순서를 API 및 가입 칩과 대조했다. ‘버거·패스트푸드’를 선택해 가입한 가게의 `stores.upjong`은 `Q0002`였고, 새로고침과 재로그인 후에도 홈에 ‘버거·패스트푸드’가 표시됐다. 빈 업종·미등록 코드·업종명을 직접 보낸 가입 요청은 모두 400을 반환했다. 기존 ‘분식’은 `Q0001`로 전환됐고, CSV에 없는 기존 업종명은 보존됐다. 공유 DB 반영은 배포 단계에 남아 있다.
 
 ## 2026-11-21 회원가입 실행 검증
 

@@ -31,7 +31,7 @@ public class OverviewController {
         this.demo = !demoDate.isBlank();
     }
 
-    public record Overview(int storeId, String storeName, LocalDate today, String storageMode,
+    public record Overview(int storeId, String storeName, String upjongCd, String upjongNm, LocalDate today, String storageMode,
                            boolean demo, boolean writeEnabled) { }
 
     @GetMapping("/health")
@@ -51,7 +51,8 @@ public class OverviewController {
         // PostgreSQL checks referenced columns and SELECT privileges even when no rows are requested.
         jdbc.queryForList("""
                 SELECT s.store_id, s.store_name, s.login_id, s.password_hash, s.postal_code, s.address,
-                       s.address_detail, m.menu2_cd, m.menu2_nm, m.store_id, m.unit_price,
+                       s.address_detail, s.upjong, u.upjong_cd, u.upjong_nm, u.display_order,
+                       m.menu2_cd, m.menu2_nm, m.store_id, m.unit_price,
                        e.id, e.store_id, e.title, e.expm_category, e.action_type, e.target_menu2_cd,
                        e.start_date, e.end_date, e.notes, e.created_at, p.base_date, p.receipt_id,
                        p.store_id, p.menu2_cd, p.price, p.quantity, p.is_refunded,
@@ -60,7 +61,8 @@ public class OverviewController {
                        f.expected_lower, f.expected_upper, f.created_at
                 FROM seoul_youth_ai_hackathon.stores s, seoul_youth_ai_hackathon.menus m,
                      seoul_youth_ai_hackathon.experiments e, seoul_youth_ai_hackathon.pos_orders p,
-                     seoul_youth_ai_hackathon.v_daily_sales_mart d, seoul_youth_ai_hackathon.ml_predictions f
+                     seoul_youth_ai_hackathon.v_daily_sales_mart d, seoul_youth_ai_hackathon.ml_predictions f,
+                     seoul_youth_ai_hackathon.upjongs u
                 WHERE false
                 """);
         return Map.of("status", "READY");
@@ -69,8 +71,15 @@ public class OverviewController {
     @GetMapping("/overview")
     @Transactional(readOnly = true)
     public Overview overview() {
-        return new Overview(stores.storeId(), stores.storeName(), LocalDate.now(clock), "POSTGRESQL",
-                demo, stores.writeEnabled());
+        var store = stores.storeInfo();
+        return new Overview(store.storeId(), store.storeName(), store.upjongCd(), store.upjongNm(),
+                LocalDate.now(clock), "POSTGRESQL", demo, stores.writeEnabled());
+    }
+
+    @GetMapping("/upjongs")
+    @Transactional(readOnly = true)
+    public Map<String, List<StoreRepository.Upjong>> upjongs() {
+        return Map.of("upjongs", stores.upjongs());
     }
 
     @GetMapping("/menus")

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, InputHTMLAttributes } from 'react';
 import { ApiError, logIn, signUp } from '../api';
 import { AddressSearch } from '../components/AddressSearch';
-import type { AuthSession, StoreAddress } from '../types';
+import { useQuery } from '../lib/useQuery';
+import type { AuthSession, StoreAddress, Upjong } from '../types';
 import './auth.css';
 
 function RequiredMark() {
@@ -10,6 +11,57 @@ function RequiredMark() {
     <b className="required-mark" aria-hidden="true">
       *
     </b>
+  );
+}
+
+function UpjongField({ error }: { error?: string }) {
+  const catalog = useQuery<{ upjongs: Upjong[] }>('/upjongs');
+  const options = catalog.data?.upjongs;
+  return (
+    <div
+      className="form-field"
+      role="radiogroup"
+      aria-labelledby="upjong-label"
+      aria-required="true"
+      aria-invalid={!!error}
+      aria-describedby={error ? 'upjong-error' : undefined}
+      tabIndex={-1}
+    >
+      <span className="auth-field-label" id="upjong-label">
+        업종
+        <RequiredMark />
+      </span>
+      {options?.length ? (
+        <div className="upjong-options">
+          {options.map(({ upjongCd, upjongNm }) => (
+            <label key={upjongCd}>
+              <input type="radio" name="upjong" value={upjongCd} required />
+              {upjongNm}
+            </label>
+          ))}
+        </div>
+      ) : catalog.error || options ? (
+        <div className="upjong-status">
+          <p role="status">
+            {catalog.error
+              ? '업종 목록을 불러오지 못했어요.'
+              : '현재 선택할 수 있는 업종이 없어요.'}
+          </p>
+          <button type="button" className="button compact secondary" onClick={catalog.retry}>
+            다시 불러오기
+          </button>
+        </div>
+      ) : (
+        <p className="upjong-status" role="status">
+          업종을 불러오고 있어요…
+        </p>
+      )}
+      {error && (
+        <span className="field-error" id="upjong-error">
+          {error}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -113,7 +165,7 @@ export function AuthPage({
       if (password.length < 8 || password.length > 128)
         issues.password = '비밀번호는 8~128자로 입력해주세요.';
       if (!value('storeName')) issues.storeName = '가게 이름을 입력해주세요.';
-      if (!value('upjong')) issues.upjong = '업종을 입력해주세요.';
+      if (!value('upjong')) issues.upjong = '업종을 선택해주세요.';
       if (!address) issues.address = '주소 검색에서 가게 주소를 선택해주세요.';
       if (!value('addressDetail')) issues.addressDetail = '상세 주소를 입력해주세요.';
       if (!value('openedDate')) issues.openedDate = '개업일을 입력해주세요.';
@@ -221,15 +273,7 @@ export function AuthPage({
                     maxLength={100}
                     error={errors.storeName}
                   />
-                  <Field
-                    name="upjong"
-                    label="업종"
-                    placeholder="예: 분식"
-                    maxLength={50}
-                    required
-                    markRequired
-                    error={errors.upjong}
-                  />
+                  <UpjongField error={errors.upjong} />
                   <div
                     className="form-field"
                     role="group"

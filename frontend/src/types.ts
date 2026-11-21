@@ -19,6 +19,11 @@ export interface StoreAddress {
   ctyNm: string;
 }
 
+export interface Upjong {
+  upjongCd: string;
+  upjongNm: string;
+}
+
 export interface SignupInput extends StoreAddress {
   loginId: string;
   password: string;
@@ -55,6 +60,8 @@ export interface SalesReport {
 export interface Overview {
   storeId: number;
   storeName: string;
+  upjongCd: string | null;
+  upjongNm: string | null;
   today: string;
   storageMode: 'POSTGRESQL';
   writeEnabled: boolean;

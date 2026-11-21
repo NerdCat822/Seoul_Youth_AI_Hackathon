@@ -135,6 +135,49 @@
   color: #b82d34;
   margin-inline-start: 3px;
 }
+.upjong-options,
+.upjong-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.upjong-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  min-height: 40px;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.upjong-options input[type='radio'] {
+  width: 14px;
+  height: 14px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: #086f50;
+}
+.upjong-options label:has(:checked) {
+  background: #edf7f1;
+  border-color: #086f50;
+  color: #07543d;
+  font-weight: 650;
+}
+.upjong-options label:has(:focus-visible) {
+  outline: 2px solid #086f50;
+  outline-offset: 2px;
+}
+.upjong-status {
+  color: var(--muted);
+  font-size: 14px;
+}
 .visually-hidden {
   position: absolute;
   width: 1px;
