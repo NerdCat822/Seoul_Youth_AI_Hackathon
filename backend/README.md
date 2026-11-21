@@ -31,7 +31,9 @@ DB 소유자로 대상 DB에 접속한 psql에서, 현재 디렉터리가 `backe
 | `DB_PASSWORD` | 환경에서 주입 | 서버 프로세스가 사용할 비밀번호 |
 | `TRYLOG_DEMO_DATE` | 서울 현재 날짜 | 과거 시연일을 재현할 때만 지정 |
 | `TRYLOG_ALLOW_WRITES` | `false` | 가입·시도 등록 활성화. 로그인한 가게의 번호는 서버 세션에서 결정 |
-| `TRYLOG_API_ORIGIN` | `http://127.0.0.1:8080` | Vite 서버에서 접근할 API 주소 |
+| `SERVER_PORT` | `7000` | Spring이 듣는 포트. 에이전트 서버(7500)가 이 주소로 Spring을 부른다 |
+| `TRYLOG_API_ORIGIN` | `http://127.0.0.1:7000` | Vite 서버에서 접근할 API 주소 |
+| `TRYLOG_AGENT_ORIGIN` | `http://127.0.0.1:7500` | Vite 서버에서 접근할 에이전트 서버(`/api/v1/agent`, `/api/v1/ml`) 주소 |
 
 스키마는 `seoul_youth_ai_hackathon`이다. 서버의 psql에서 다음 점검을 먼저 실행할 수 있다. 트랜잭션은 읽기 전용이며 마지막에 롤백한다. 카탈로그·열·키·뷰·권한과 가게별 메뉴·시도·주문 행 수, 유효 영업일 범위를 출력한다. 집계 오류가 나면 앞선 객체·권한 출력과 대조한다.
 
@@ -88,6 +90,19 @@ npm run dev
 | GET | `/experiments/{id}/report`, `/experiments/{id}/sample.csv` | 영구 보고서 조회(현 DDL에서는 404), 현재 가게·기간에 맞춘 합성 CSV |
 | GET | `/demo/forecast` | 가게별 유효 일매출에서 가장 최근 영업일 다음 날부터 7일. 완전한 저장 예측 회차 또는 4주 같은 요일 평균. 이력 부족은 `INSUFFICIENT_DATA`와 누락 날짜 |
 | GET | `/cases` | 가상으로 구성한 동네 사례 6개 |
+| GET | `/chats`, `/chats/{id}` | 선택 가게의 저장된 대화 목록(최근 대화순), 대화 한 건의 메시지(말한 순서). 다른 가게의 ID는 404 |
+
+## 대화 내역
+
+AI 비서와 주고받은 말은 `chat_sessions`(대화방)와 `chat_messages`(메시지) 두 테이블에 보관한다. 제공된 DDL에는 없는 테이블이므로 `ops/chat-schema.sql`을 한 번 실행해 만든다. 저장하는 쪽이 지킬 규칙은 그 파일 머리말에 있다. `ops/chat-sample.sql`은 화면 확인용 예시 대화 2건을 넣는다.
+
+```sh
+# backend/ 에서 실행. 접속 변수는 위의 점검 명령과 같다.
+PGPASSWORD="$DB_PASSWORD" psql -X -v ON_ERROR_STOP=1 -h "${DB_HOST:-localhost}" -U "${DB_USER:-nerdcat822}" \
+  -d "${DB_NAME:-hgkim_postgresql}" -f ops/chat-schema.sql
+```
+
+API는 조회만 한다. `role`이 `SYSTEM`인 메시지는 모델 지시문이므로 응답에서 뺀다. `payload`(JSONB)는 저장된 그대로 JSON으로 내려준다. 화면은 그 안의 `options`(답 아래 선택지)와 `cards`(제안한 해볼 일)를 그린다. 시각은 UTC ISO-8601이고 화면에서 서울 시간으로 바꿔 보여준다. 두 테이블이 없는 DB에서는 이 경로만 503을 반환하고 `/ready`와 다른 기능은 영향을 받지 않는다. React에서는 **내 기록 → 대화 내역**에서 본다.
 
 ## 보고서 보존에 필요한 차이
 

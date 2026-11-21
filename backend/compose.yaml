@@ -6,6 +6,7 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0
       SERVER_SERVLET_SESSION_COOKIE_SECURE:
+      SERVER_PORT: 7000
       DB_HOST: ${DB_HOST:-postgres-db}
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-hgkim_postgresql}
@@ -21,7 +22,7 @@ services:
         bind:
           create_host_path: false
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:7000:7000"
     networks:
       - shared-network
 networks:
