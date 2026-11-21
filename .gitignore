@@ -1,0 +1,4 @@
+# 비밀 값이 든 환경 파일은 올리지 않는다 (예: ANTHROPIC_API_KEY)
+.env
+.env.*
+!.env.example
