@@ -43,10 +43,10 @@
           <div class="card p-5"><p class="text-[13px] font-medium text-sub">올린 자료</p><p class="mt-1.5 text-base font-semibold" data-upload-count></p><p class="mt-1.5 text-[13px] font-medium text-sub" data-upload-kinds></p></div>
           <div class="card p-5"><p class="text-[13px] font-medium text-sub">이 자료를 쓰는 곳</p><p class="mt-1.5 text-base font-semibold">결과 1 · 예상매출</p><p class="mt-1.5 text-[13px] font-medium text-sub">떡볶이 세트 가격 변경</p></div>
         </div>
-        <table class="table mt-6">
+        <div class="mt-6 overflow-x-auto"><table class="table min-w-[760px]">
           <thead><tr><th class="w-[140px]">올린 날</th><th class="w-[260px]">자료</th><th class="w-[220px]">구간</th><th>항목</th><th class="w-[120px]"><span class="sr-only">관리</span></th></tr></thead>
           <tbody data-rows></tbody>
-        </table>
+        </table></div>
         <p class="mt-4 rounded-xl bg-surface-2 px-5 py-3 text-sm font-semibold text-sub">자료를 지우면 그 자료를 쓴 결과(떡볶이 세트 가격 변경)와 예상매출을 다시 계산해요.</p>
       </section>
     </div>
@@ -55,6 +55,7 @@
   <script src="assets/js/icons.js"></script>
   <script src="assets/js/data.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-chat.js"></script>
   <script>
     const { $, $$, esc, params, toast, openModal } = App;
     const D = TRYLOG, S = D.store;

@@ -1,16 +1,28 @@
 <aside
   data-ai-panel
-  class="flex flex-col overflow-hidden rounded-panel border border-line-light bg-white shadow-panel"
+  id="ai-panel"
+  class="ai-panel flex flex-col overflow-hidden rounded-panel border border-line-light bg-white shadow-panel"
   aria-label="AI 대화"
 >
-  <div class="flex h-20 flex-none items-center justify-between px-6">
-    <button type="button" class="icon-btn" data-panel-list aria-label="대화 목록">
+  <div class="grid h-20 flex-none grid-cols-[1fr_auto_1fr] items-center px-6">
+    <button
+      type="button"
+      class="icon-btn justify-self-start"
+      data-panel-list
+      aria-label="대화 목록"
+      aria-expanded="false"
+    >
       <span data-icon="menu" data-size="24"></span>
     </button>
     <h2 class="text-[18px] font-bold" data-panel-title>대화</h2>
-    <button type="button" class="btn btn-lg btn-neutral gap-1.5" data-panel-min>
-      작게보기 <span data-icon="collapse" data-size="16"></span>
-    </button>
+    <span class="flex items-center justify-self-end gap-2">
+      <a href="ai.html" class="btn btn-lg btn-neutral gap-1.5" data-panel-expand
+        >크게 보기 <span data-icon="expand" data-size="16"></span
+      ></a>
+      <button type="button" class="icon-btn" data-ai-close aria-label="대화 닫기">
+        <span data-icon="close" data-size="24"></span>
+      </button>
+    </span>
   </div>
   <div class="relative min-h-0 flex-1">
     <div class="absolute inset-0 overflow-y-auto px-6 pb-4" data-chat-scroll>
@@ -79,11 +91,3 @@
     </form>
   </div>
 </aside>
-<button
-  type="button"
-  class="fixed bottom-8 right-8 z-30 flex h-14 items-center gap-2 rounded-full bg-heading px-5 text-[15px] font-semibold text-white shadow-pop hover:bg-black"
-  data-ai-fab
-  hidden
->
-  <span data-icon="sparkling" data-size="20"></span> AI 대화
-</button>

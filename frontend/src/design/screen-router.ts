@@ -52,6 +52,8 @@ function template(doc: Document) {
   return {
     title: doc.title,
     nav: doc.body.dataset.nav ?? '',
+    ai: doc.body.dataset.ai ?? '',
+    aiHints: doc.body.dataset.aiHints ?? '',
     content: document.importNode(contentRegion(doc), true),
   };
 }

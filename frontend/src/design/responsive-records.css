@@ -3,6 +3,16 @@
   display: none;
 }
 
+[data-view-toggle] button[aria-pressed='true'] {
+  color: #101828;
+  background: white;
+  box-shadow: 0 1px 2px #1018281a;
+}
+
+[data-screen='records'] [data-cards] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+}
+
 /* The detail, photo and report panels have fixed desktop sidebars. */
 @media (max-width: 1023px) {
   :is([data-nav='records'], [data-nav='calendar'], [data-nav='settings'], [data-nav='store']) main {
@@ -46,10 +56,20 @@
 
   [data-status-tabs] {
     flex-wrap: nowrap;
-    margin-top: 1.5rem;
+    max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     padding: 0.25rem;
+  }
+
+  [data-screen='records'] .flex:has(> [data-status-tabs]) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  [data-view-toggle] {
+    align-self: flex-end;
   }
 
   [data-status-tabs] [role='tab'] {
@@ -59,6 +79,7 @@
   /* Keep all six record fields visible when the table becomes a stack of cards. */
   [data-screen='records'] [data-table] {
     display: block;
+    min-width: 0;
     border: 0;
     border-radius: 0;
     overflow: visible;
@@ -106,12 +127,6 @@
     font-size: 0.8125rem;
   }
 
-  [data-screen='calendar'] .flex:has(> [data-month]) {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-  }
-
   [data-screen='calendar'] [data-month] {
     min-width: 0;
     font-size: 1.0625rem;
@@ -124,17 +139,6 @@
   [data-weekdays] > span {
     padding: 0.5rem 0;
     text-align: center;
-  }
-
-  [data-screen='calendar'] [data-grid] > div {
-    min-width: 0;
-    min-height: 3.75rem;
-    padding: 0.1875rem;
-  }
-
-  [data-screen='calendar'] [data-grid] a {
-    padding: 0.125rem;
-    font-size: 0.75rem;
   }
 
   .calendar-agenda {
@@ -226,9 +230,25 @@
     align-items: baseline;
   }
 
-  [data-screen='result'] [data-yaxis],
-  [data-screen='result'] [data-bars] {
-    height: 12rem;
+  [data-screen='result'] [data-chart] {
+    gap: 1rem;
+  }
+
+  [data-screen='result'] [data-chart] .bar-col {
+    padding-inline: 0.25rem;
+  }
+
+  [data-screen='result'] [data-chart] figure > p {
+    padding-left: 0;
+  }
+
+  [data-screen='settings'] nav[aria-label='가게 · 계정 메뉴'] {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+  }
+
+  [data-screen='settings'] nav[aria-label='가게 · 계정 메뉴'] a {
+    font-size: 1rem;
   }
 
   [data-screen='settings'] dl > div {

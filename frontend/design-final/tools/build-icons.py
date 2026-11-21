@@ -9,7 +9,7 @@ NAMES = {
  'image':'image-line','search':'search-line','delete':'delete-bin-line','more':'more-2-fill','arrow-left':'arrow-left-line',
  'collapse':'collapse-diagonal-line','expand':'expand-diagonal-line','time':'time-line','file-list':'file-list-3-line','attachment':'attachment-2',
  'info':'information-line','inbox':'inbox-archive-line','calendar-check':'calendar-check-line','lightbulb':'lightbulb-line','pencil':'pencil-line',
- 'camera':'camera-line','keyboard':'keyboard-line','file-text':'file-text-line',
+ 'camera':'camera-line', 'list':'list-unordered', 'grid':'layout-grid-line','keyboard':'keyboard-line','file-text':'file-text-line','sun':'sun-line','cloud':'cloudy-line','rain':'showers-line',
 }
 out = {}
 for key, fname in NAMES.items():

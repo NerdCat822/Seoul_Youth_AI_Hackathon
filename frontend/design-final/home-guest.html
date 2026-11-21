@@ -6,11 +6,11 @@
   <title>첫 방문 홈 · trylog</title>
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body data-nav="home">
+<body data-nav="home" data-ai="open" data-ai-hints="bottom">
   <header data-topbar="guest"></header>
 
-  <div class="flex justify-center gap-20 px-14 pb-16 pt-8">
-    <main class="w-full max-w-container min-w-0">
+  <div class="px-14 pb-16 pt-8">
+    <main class="mx-auto w-full max-w-container min-w-0">
       <h1 class="page-title">오늘 바로 해볼 수 있는 일부터 시작해 보세요</h1>
       <p class="mt-5 text-base text-sub">돈 들이지 않고, 지금 가게에서 바로 할 수 있는 방법만 모았어요.</p>
 
@@ -61,7 +61,6 @@
         </section>
       </div>
     </main>
-    <div class="flex-none transition-[width]" data-ai-host></div>
   </div>
 
   <script src="assets/js/icons.js"></script>
@@ -74,7 +73,6 @@
     $('[data-today]').innerHTML = pick(['i6', 'i4', 'i5']);
     $('[data-free]').innerHTML = pick(['i1', 'i7', 'i3']);
     App.hydrateIcons();
-    mountAiPanel($('[data-ai-host]'));
   </script>
 </body>
 </html>

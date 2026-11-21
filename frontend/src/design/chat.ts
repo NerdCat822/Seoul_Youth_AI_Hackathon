@@ -13,8 +13,11 @@ import type {
   ChatConversation,
   ChatSession,
   Experiment,
+  NeighborhoodCase,
 } from '../types';
+import { prepareCase, type CasePhoto } from './case-preparation';
 import panelMarkup from './chat-panel.html?raw';
+import { bindChatPanel } from './chat-panel';
 import './inputs.css';
 
 const chipCategories = {
@@ -49,6 +52,9 @@ type DraftCard = {
   compare: string;
   saved: boolean;
 };
+
+// Pass an unsent draft across the same document when the panel expands.
+let expandedDraft: { href: string; text: string; photo?: CasePhoto } | undefined;
 
 function snapshot(reply: AgentChatResponse): DraftCard | null {
   const draft = reply.draft;
@@ -103,6 +109,30 @@ export async function mountChat(
   let activeKey: string | null = null;
   let userInteracted = false;
   let currentActions: HTMLElement | null = null;
+  let caseController: AbortController | undefined;
+  let photo: CasePhoto | undefined;
+  function showCase(idea: NeighborhoodCase, existing?: CasePhoto) {
+    caseController?.abort();
+    caseController = new AbortController();
+    photo = existing;
+    if (empty) empty.hidden = true;
+    panel.querySelector('[data-case-preparation]')?.remove();
+    log.append(
+      prepareCase(
+        idea,
+        data?.menus ?? [],
+        existing,
+        (selection, message) => {
+          photo = selection;
+          if (message) {
+            input.value = message;
+            updateSend();
+          }
+        },
+        AbortSignal.any([signal, caseController.signal]),
+      ),
+    );
+  }
   log.setAttribute('role', 'log');
   log.setAttribute('aria-live', 'polite');
   input.maxLength = 500;
@@ -111,6 +141,8 @@ export async function mountChat(
   }
   function remember(id: string) {
     if (signal.aborted) return;
+    const expand = panel.querySelector<HTMLAnchorElement>('[data-panel-expand]');
+    if (expand) expand.href = 'ai.html?thread=' + encodeURIComponent(id);
     if (activeKey) {
       try {
         sessionStorage.setItem(activeKey, id);
@@ -214,9 +246,10 @@ export async function mountChat(
   speaking.innerHTML =
     '<span role="status">답을 소리로 읽고 있어요.</span><button type="button">그만 듣기</button>';
   speaking.querySelector('button')!.onclick = () => stopSpeaking();
-  onSpeakingChange((value) => {
+  const unsubscribe = onSpeakingChange((value) => {
     speaking.hidden = !value;
   });
+  signal.addEventListener('abort', unsubscribe, { once: true });
   async function send(text: string, voice = false) {
     stopSpeaking();
     if (!data) {
@@ -231,6 +264,13 @@ export async function mountChat(
     }
     userInteracted = true;
     busy = true;
+    panel
+      .querySelectorAll<HTMLInputElement | HTMLButtonElement>(
+        '[data-case-preparation] :is(input,button)',
+      )
+      .forEach((el) => {
+        el.disabled = true;
+      });
     updateSend();
     updateVoice();
     input.value = '';
@@ -259,7 +299,7 @@ export async function mountChat(
       if (reply.experiment) actions += savedCard(reply.experiment);
       const content = [reply.reply, ...reply.notices].filter(Boolean).join('\n');
       currentActions = append('ASSISTANT', content, actions);
-      if (voice) {
+      if (voice && !signal.aborted && open) {
         // 카드는 눈으로만 보이므로 제안 제목을 번호와 함께 읽는다.
         const picks = cards.map((card, index) => `${index + 1}번, ${card.title}.`);
         speak([content, ...picks].join('\n')).catch(() => undefined);
@@ -398,31 +438,44 @@ export async function mountChat(
   });
   let open = true;
   if (compact) {
-    const media = matchMedia('(min-width: 1680px)'),
-      fab = host.querySelector<HTMLButtonElement>('[data-ai-fab]')!;
-    const base = panel.className;
-    const layout = (visible: boolean) => {
-      open = visible;
-      panel.hidden = !open;
-      fab.hidden = open;
-      host.style.width = media.matches && open ? '552px' : '0px';
-      panel.className =
-        base +
-        (media.matches
-          ? ' sticky top-20 h-[calc(100vh-112px)] w-[552px]'
-          : ' fixed right-6 top-20 bottom-6 z-40 w-[552px] max-w-[calc(100vw-48px)] shadow-pop');
-      mountVoice(open);
-    };
-    media.addEventListener('change', () => layout(media.matches), { signal });
-    find('[data-panel-min]').onclick = () => layout(false);
-    fab.onclick = () => {
-      layout(true);
-      input.focus();
-    };
-    layout(media.matches);
     const list = find('[data-chat-list]'),
       items = find('[data-list-items]'),
       search = find<HTMLInputElement>('[data-list-search]');
+    function showList(show: boolean) {
+      list.hidden = !show;
+      find('[data-panel-list]').setAttribute('aria-expanded', String(show));
+      find('[data-panel-title]').textContent = show ? '대화 목록' : '대화';
+    }
+    const expand = find<HTMLAnchorElement>('[data-panel-expand]');
+    expand.addEventListener('click', (event) => {
+      if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+        expandedDraft = { href: expand.href, text: input.value, photo };
+      }
+    });
+    bindChatPanel(
+      panel,
+      signal,
+      (visible) => {
+        open = visible;
+        mountVoice(open);
+      },
+      (id) => {
+        const idea = data?.cases.find((item) => item.id === id);
+        if (!idea) return;
+        if (busy || voiceBusy) return toast('진행 중인 대화가 끝나면 다시 시도해 주세요.');
+        userInteracted = true;
+        threadId = null;
+        title = '';
+        currentActions = null;
+        log.replaceChildren();
+        empty.hidden = false;
+        showList(false);
+        input.value = idea.title + ' 해볼게요.';
+        showCase(idea);
+        expand.href = 'ai.html?idea=' + encodeURIComponent(id);
+        input.focus();
+      },
+    );
     let sessions: ChatSession[] = [];
     function filter() {
       const q = search.value.trim();
@@ -441,8 +494,7 @@ export async function mountChat(
         location.assign('login.html');
         return;
       }
-      list.hidden = !list.hidden;
-      find('[data-panel-title]').textContent = list.hidden ? '대화' : '대화 목록';
+      showList(Boolean(list.hidden));
       if (!list.hidden) {
         try {
           sessions = await request<ChatSession[]>('/chats', { signal });
@@ -482,6 +534,12 @@ export async function mountChat(
             : topic === 'review'
               ? '리뷰 답글을 어떻게 달면 좋을까요?'
               : '';
+  }
+  if (!compact) {
+    const carried = expandedDraft?.href === location.href ? expandedDraft : undefined;
+    expandedDraft = undefined;
+    if (idea) showCase(idea, carried?.photo);
+    if (carried) input.value = carried.text;
   }
   try {
     const session = await getSession(signal);

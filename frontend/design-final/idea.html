@@ -13,7 +13,7 @@
     <div class="container-main flex items-start gap-10">
       <article class="min-w-0 flex-1" data-article></article>
       <aside class="sticky top-24 w-[390px] flex-none">
-        <a class="btn btn-xl btn-primary w-full" data-try>우리 가게에서 해보기</a>
+        <button type="button" class="btn btn-xl btn-primary w-full" data-try aria-controls="ai-panel">우리 가게에서 해보기</button>
         <section class="mt-5 rounded-xl border border-line-light bg-white p-5" data-peers></section>
       </aside>
     </div>
@@ -22,6 +22,7 @@
   <script src="assets/js/icons.js"></script>
   <script src="assets/js/data.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-chat.js"></script>
   <script>
     const { $, icon, esc, params } = App;
     const D = TRYLOG;
@@ -45,8 +46,10 @@
         <span>${i.ease === '바로 시작' ? '바로 가능' : i.ease}</span><span class="text-dim">·</span><span>추가 비용 ${i.cost}</span></div>
       <h1 class="page-title mt-4">${esc(i.title)}</h1>
       <p class="mt-3 text-[15px] leading-6 text-body">${esc(d.lead)}</p>
-      <dl class="mt-8 space-y-3">${[['inbox', '추가 비용', i.cost], ['time', '준비 시간', d.prep], ['calendar', '진행 기간', i.weeks + '주'], ['file-list', '비교 항목', d.compare]].map(([ic, k, v]) =>
+      <div class="divider mt-6"></div>
+      <dl class="mt-5 space-y-3">${[['inbox', '추가 비용', i.cost], ['time', '준비 시간', d.prep], ['calendar', '진행 기간', i.weeks + '주'], ['file-list', '비교 항목', d.compare]].map(([ic, k, v]) =>
         `<div class="flex items-center gap-3 text-[15px]"><span class="text-dim">${icon(ic, 18)}</span><dt class="w-16 font-semibold">${k}</dt><dd class="font-medium">${esc(v)}</dd></div>`).join('')}</dl>
+      <div class="divider mt-7"></div>
       ${sec('이렇게 비교해요', `<ul>${bullet(d.how)}</ul>`)}
       ${sec('준비할 일', `<ul class="space-y-5">${d.todo.map(([t, s]) => bullet(t, s)).join('')}</ul>`)}
       ${sec('적용 방법', `<ol class="space-y-5">${d.steps.map(([t, s], n) => `<li class="flex gap-3"><span class="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-brand-weak text-[13px] font-bold text-brand">${n + 1}</span>
@@ -61,7 +64,7 @@
       <ul class="mt-4 space-y-2">${seg.map(([l, n, col]) => `<li class="flex items-center justify-between text-sm"><span class="flex items-center gap-2 text-body"><i class="h-1.5 w-1.5 rounded-full" style="background:${col}"></i>${l}</span><span class="font-medium">${n}곳</span></li>`).join('')}</ul>
       <div class="divider my-5"></div>
       <p class="text-sm leading-5 text-sub">가게마다 결과가 달라요.<br>늘어난 이유를 이 일 하나로 단정할 수는 없어요.</p>`;
-    $('[data-try]').href = `ai.html?idea=${i.id}`;
+    $('[data-try]').addEventListener('click', () => TrylogAI ? TrylogAI.open({ idea: i.id }) : (location.href = `ai.html?idea=${i.id}`));
   </script>
 </body>
 </html>

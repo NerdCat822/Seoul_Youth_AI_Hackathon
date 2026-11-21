@@ -1,7 +1,8 @@
-import { addDays, asDate, formatDate, formatMonth, shiftMonth } from '../lib/dates';
+import { formatDate } from '../lib/dates';
 import { actions } from '../lib/labels';
 import type { AppData, Experiment } from '../types';
-import { daysBetween, el, notice, recordUrl, ui } from './record-ui';
+import { daysBetween, el, notice, recordDestination, recordUrl, ui } from './record-ui';
+import { mountCalendar } from './record-calendar';
 import { mountConfirmation, mountReport } from './record-reports';
 import { navigateTo } from './screen-router';
 
@@ -26,18 +27,54 @@ function badge(record: Experiment) {
   const key = keyByStatus[record.status];
   return `<span class="badge badge-${key}">${labels[key]}</span>`;
 }
-function destination(record: Experiment) {
-  return recordUrl(record.status === 'COMPLETED' ? 'result' : 'record', record.id);
-}
 function targetName(record: Experiment, data: AppData) {
   return data.menus.find((m) => m.menuCode === record.targetMenuCode)?.menuName || '비교 메뉴 선택';
+}
+
+function recordCard(r: Experiment, data: AppData) {
+  const { esc, icon } = ui();
+  const today = data.overview.today;
+  const days = Math.max(1, daysBetween(r.startDate, r.endDate) + 1);
+  const progress = Math.min(
+    100,
+    Math.max(0, Math.round(((daysBetween(r.startDate, today) + 1) * 100) / days)),
+  );
+  const hot = r.status === 'READY';
+  const linkLabel = hot ? '결과 확인하기' : r.status === 'COMPLETED' ? '결과 보기' : '기록 보기';
+  const note = {
+    READY: '전후 판매 자료를 비교할 수 있어요.',
+    IN_PROGRESS: `결과 확인까지 ${Math.max(0, daysBetween(today, r.checkDate))}일 남았어요.`,
+    COMPLETED: '기록의 비교 결과를 확인해 보세요.',
+    PLANNED: formatDate(r.startDate) + '에 시작해요.',
+  }[r.status];
+  const fields = [
+    ['시작일', formatDate(r.startDate)],
+    ['종료일', formatDate(r.endDate)],
+    ['결과 확인일', formatDate(r.checkDate)],
+    ['비교 항목', targetName(r, data)],
+  ];
+  return `<a href="${esc(recordDestination(r))}" class="flex min-w-0 flex-col rounded-card bg-white p-5 transition-shadow hover:shadow-panel ${hot ? 'border-2 border-brand/60 shadow-panel' : 'border border-line-light'}">
+    <div class="flex items-start justify-between gap-3"><h2 class="text-[18px] font-semibold leading-7">${esc(r.title)}</h2><span class="flex-none">${badge(r)}</span></div>
+    <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">${fields.map(([label, value]) => `<div class="min-w-0"><dt class="text-[13px] text-sub">${label}</dt><dd class="mt-1 truncate text-sm font-medium text-body" title="${esc(value)}">${esc(value)}</dd></div>`).join('')}</dl>
+    <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-surface" role="progressbar" aria-label="진행률" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"><div class="h-full rounded-full bg-brand" style="width:${progress}%"></div></div>
+    <div class="mt-auto flex items-center justify-between gap-3 pt-4 text-sm"><p class="${hot ? 'text-danger' : 'text-sub'}">${esc(note)}</p><span class="inline-flex flex-none items-center font-semibold text-brand-text">${linkLabel} ${icon('chevron-right', 16)}</span></div></a>`;
 }
 
 function records(data: AppData) {
   const { esc } = ui();
   const columns = Array.from(el('[data-table]').querySelectorAll('th')).slice(2);
-  const filter = new URLSearchParams(location.search).get('status');
+  const params = new URLSearchParams(location.search);
+  const filter = params.get('status');
   let current: Status = filter && Object.hasOwn(labels, filter) ? (filter as Status) : 'all';
+  let preference: string | null = params.get('view');
+  if (!preference) {
+    try {
+      preference = localStorage.getItem('trylog.recordsView');
+    } catch {
+      /* Storage may be unavailable in private browsing. */
+    }
+  }
+  let view = preference === 'card' ? 'card' : 'list';
   const render = () => {
     const filtered = data.experiments.filter(
       (r) => current === 'all' || keyByStatus[r.status] === current,
@@ -53,7 +90,7 @@ function records(data: AppData) {
       .join('');
     el('[data-table] tbody').innerHTML = filtered
       .map(
-        (r) => `<tr tabindex="0" data-href="${esc(destination(r))}">
+        (r) => `<tr tabindex="0" data-href="${esc(recordDestination(r))}">
       <td class="text-[15px] font-semibold text-heading">${esc(r.title)}</td><td>${badge(r)}</td>
       ${[
         formatDate(r.startDate),
@@ -68,18 +105,35 @@ function records(data: AppData) {
         .join('')}</tr>`,
       )
       .join('');
-    el('[data-table]').hidden = !filtered.length;
+    el('[data-cards]').innerHTML = filtered.map((r) => recordCard(r, data)).join('');
+    el('[data-table]').parentElement!.hidden = !filtered.length || view !== 'list';
+    el('[data-cards]').hidden = !filtered.length || view !== 'card';
     el('[data-empty]').hidden = !!filtered.length;
+    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-view]')) {
+      button.setAttribute('aria-pressed', String(button.dataset.view === view));
+    }
+    if (current === 'all') params.delete('status');
+    else params.set('status', current);
+    if (view === 'list') params.delete('view');
+    else params.set('view', view);
+    history.replaceState(history.state, '', 'records.html' + (params.size ? '?' + params : ''));
+  };
+  el('[data-view-toggle]').onclick = (event) => {
+    const selected = (event.target as HTMLElement).closest<HTMLElement>('[data-view]')?.dataset
+      .view;
+    if (selected !== 'card' && selected !== 'list') return;
+    view = selected;
+    try {
+      localStorage.setItem('trylog.recordsView', selected);
+    } catch {
+      /* The current selection still works without storage. */
+    }
+    render();
   };
   el('[data-status-tabs]').onclick = (event) => {
     const code = (event.target as HTMLElement).closest<HTMLElement>('[data-s]')?.dataset.s;
     if (code && Object.hasOwn(labels, code)) {
       current = code as Status;
-      history.replaceState(
-        history.state,
-        '',
-        code === 'all' ? 'records.html' : 'records.html?status=' + code,
-      );
       render();
       el(`[data-s="${code}"]`).focus();
     }
@@ -91,78 +145,6 @@ function records(data: AppData) {
   el('[data-table]').onclick = open;
   el('[data-table]').onkeydown = (event) => {
     if (event.key === 'Enter') open(event);
-  };
-  render();
-}
-
-function calendar(data: AppData) {
-  const { esc, icon } = ui();
-  const today = data.overview.today;
-  let month = today.slice(0, 7);
-  const colors = ['#155dfc', '#0092b8', '#8e51ff', '#e60076', '#6a7282'];
-  const agenda = document.createElement('section');
-  agenda.className = 'calendar-agenda';
-  el('[data-grid]').parentElement!.after(agenda);
-  el('[data-weekdays]').innerHTML = [...'일월화수목금토']
-    .map((day) => `<span class="px-3 py-3">${day}</span>`)
-    .join('');
-  function render() {
-    el('[data-month]').textContent = formatMonth(month);
-    const first = month + '-01';
-    const offset = asDate(first).getUTCDay();
-    const length = daysBetween(first, shiftMonth(month, 1) + '-01');
-    const cells = Array.from(
-      { length: Math.max(35, Math.ceil((offset + length) / 7) * 7) },
-      (_, i) => {
-        const date = addDays(first, i - offset);
-        const inside = date.startsWith(month);
-        const events: string[] = [],
-          results: string[] = [];
-        data.experiments.forEach((r, index) => {
-          const href = esc(destination(r));
-          const color = colors[index % colors.length];
-          if (date >= r.startDate && date <= r.endDate)
-            events.push(
-              `<a href="${href}" class="block truncate rounded px-1.5 py-0.5 text-[13px] font-medium hover:brightness-95" style="color:${color};background:${color}14">${esc(r.title)}</a>`,
-            );
-          if (date === r.checkDate)
-            results.push(
-              `<a href="${href}" class="block truncate rounded bg-brand px-1.5 py-0.5 text-[13px] font-semibold text-white hover:bg-[#009a67]">결과 확인 · ${esc(r.title)}</a>`,
-            );
-        });
-        return `<div class="min-h-[124px] border-t border-line-light p-2 ${i % 7 ? 'border-l' : ''} ${inside ? '' : 'bg-surface-2/60'}">
-        <span class="mb-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full px-1 text-[13px] font-medium ${date === today ? 'bg-info font-semibold text-white' : inside ? 'text-body' : 'text-muted'}">${Number(date.slice(-2))}</span>
-        <div class="space-y-1">${results.join('')}${events.join('')}</div></div>`;
-      },
-    );
-    el('[data-grid]').innerHTML = cells.join('');
-    const last = addDays(first, length - 1);
-    const items = data.experiments.filter(
-      (record) =>
-        (record.startDate <= last && record.endDate >= first) ||
-        (record.checkDate >= first && record.checkDate <= last),
-    );
-    agenda.hidden = items.length === 0;
-    agenda.innerHTML = `<h2 class="section-title">${esc(formatMonth(month))} 기록</h2><ul>${items
-      .map(
-        (record) => `<li><a href="${esc(destination(record))}">
-        <strong>${esc(record.title)}</strong>
-        <span>${formatDate(record.startDate)} ~ ${formatDate(record.endDate)} · 결과 확인 ${formatDate(record.checkDate)}</span>
-      </a></li>`,
-      )
-      .join('')}</ul>`;
-  }
-  document.querySelectorAll<HTMLElement>('[data-move]').forEach((button) => {
-    const delta = Number(button.dataset.move);
-    button.innerHTML = icon(delta < 0 ? 'chevron-left' : 'chevron-right', 20);
-    button.onclick = () => {
-      month = shiftMonth(month, delta);
-      render();
-    };
-  });
-  el('[data-today]').onclick = () => {
-    month = today.slice(0, 7);
-    render();
   };
   render();
 }
@@ -287,7 +269,7 @@ function edit(r: Experiment, data: AppData) {
 
 export async function mountRecords(page: string, data: AppData, signal: AbortSignal) {
   if (page === 'records') return records(data);
-  if (page === 'calendar') return calendar(data);
+  if (page === 'calendar') return mountCalendar(data, signal);
   const id = new URLSearchParams(location.search).get('id');
   const record = data.experiments.find((r) => r.id === id);
   if (page === 'confirm') return mountConfirmation(record);

@@ -21,11 +21,13 @@
 
       <!-- STEP 1 -->
       <section data-step="1">
-        <div class="mt-10 flex flex-col items-center rounded-card border-2 border-dashed border-line bg-surface-2 px-6 py-10 text-center transition-colors" data-drop>
-          <span class="text-sub" data-icon="upload" data-size="32"></span>
+        <h2 class="section-title mt-10">파일 업로드</h2>
+        <ul class="mt-4 divide-y divide-line-light rounded-xl border border-line-light px-4" data-files1 hidden></ul>
+        <div class="mt-3 flex flex-col items-center rounded-card border border-dashed border-line bg-surface-2 px-6 py-10 text-center transition-colors" data-drop>
+          <span class="text-sub" data-icon="upload" data-size="28"></span>
           <p class="mt-3 text-base font-semibold">파일을 끌어 놓거나 선택해 주세요</p>
-          <p class="mt-1 text-[13px] text-sub">엑셀 · PDF · 사진 파일을 여러 개 올릴 수 있어요</p>
-          <label class="btn btn-lg btn-primary mt-5 cursor-pointer">파일 선택<input type="file" class="sr-only" multiple accept=".xlsx,.xls,.csv,.pdf,image/*" data-input></label>
+          <p class="mt-1 text-[13px] text-sub">엑셀(XLSX·CSV) · PDF · 사진 파일을 여러 개 올릴 수 있어요</p>
+          <label class="btn btn-md mt-5 cursor-pointer bg-brand-weak text-brand-text hover:bg-brand-soft">파일 업로드<input type="file" class="sr-only" multiple accept=".xlsx,.xls,.csv,.pdf,image/*" data-input></label>
         </div>
 
         <section class="mt-12">
@@ -66,7 +68,7 @@
       <section data-step="2" hidden>
         <div class="mt-10 flex items-center justify-between">
           <h2 class="section-title">업로드 목록</h2>
-          <label class="btn btn-sm btn-primary cursor-pointer"><span data-icon="add" data-size="16"></span>파일 추가<input type="file" class="sr-only" multiple accept=".xlsx,.xls,.csv,.pdf,image/*" data-input></label>
+          <label class="btn btn-sm cursor-pointer bg-brand-weak text-brand-text hover:bg-brand-soft"><span data-icon="add" data-size="16"></span>파일 추가<input type="file" class="sr-only" multiple accept=".xlsx,.xls,.csv,.pdf,image/*" data-input></label>
         </div>
         <ul class="mt-4 divide-y divide-line-light rounded-card border border-line-light px-5" data-files></ul>
 
@@ -89,6 +91,7 @@
   <script src="assets/js/icons.js"></script>
   <script src="assets/js/data.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-chat.js"></script>
   <script>
     const { $, $$, icon, esc, toast, openModal } = App;
     const files = [];
@@ -111,7 +114,7 @@
       if (n === 2) renderCheck();
       scrollTo(0, 0);
     }
-    function add(list) { files.push(...list); $('[data-next]').disabled = !files.length; if (!$('[data-step="2"]').hidden) renderCheck(); toast(`파일 ${list.length}개를 올렸어요.`); }
+    function add(list) { files.push(...list); $('[data-next]').disabled = !files.length; renderList1(); if (!$('[data-step="2"]').hidden) renderCheck(); toast(`파일 ${list.length}개를 올렸어요.`); }
     $$('[data-input]').forEach(inp => inp.addEventListener('change', e => { add([...e.target.files]); e.target.value = ''; }));
     const drop = $('[data-drop]');
     ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('border-brand', 'bg-brand-weak'); }));
@@ -128,13 +131,15 @@
     });
 
     let complete = false;
-    function renderCheck() {
-      $('[data-files]').innerHTML = files.map((f, i) => `<li class="flex items-center gap-3 py-3.5">
+    const rows = () => files.map((f, i) => `<li class="flex items-center gap-3 py-3.5">
         <span class="text-sub">${icon(kind(f) === 'image' ? 'image' : kind(f) === 'excel' ? 'file-excel' : 'file-text', 20)}</span>
-        <span class="flex-1 truncate text-sm text-body">${esc(f.name)} <span class="text-sub">· ${kindLabel[kind(f)]}</span></span>
+        <span class="min-w-0 flex-1 truncate text-sm text-body">${esc(f.name)} <span class="text-sub">· ${kindLabel[kind(f)]}</span></span>
         <span class="text-[13px] font-medium text-brand">업로드 완료</span>
-        <button type="button" class="icon-btn h-7 w-7 text-sub" aria-label="${esc(f.name)} 삭제" data-rm="${i}">${icon('close', 16)}</button></li>`).join('')
-        || '<li class="py-6 text-center text-sm text-sub">올린 파일이 없어요.</li>';
+        <button type="button" class="icon-btn h-7 w-7 text-sub" aria-label="${esc(f.name)} 삭제" data-rm="${i}">${icon('close', 16)}</button></li>`).join('');
+    function renderList1() { const l = $('[data-files1]'); l.innerHTML = rows(); l.hidden = !files.length; }
+    function renderCheck() {
+      renderList1();
+      $('[data-files]').innerHTML = rows() || '<li class="py-6 text-center text-sm text-sub">올린 파일이 없어요.</li>';
       // 목업 규칙: 파일 2개 이상이면 기간이 모두 채워진 것으로 봄
       complete = files.length >= 2;
       $('[data-warn]').hidden = complete || !files.length;
@@ -149,6 +154,7 @@
       ].join('') : '';
       $('[data-show]').disabled = !files.length;
     }
+    $('[data-files1]').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { files.splice(+b.dataset.rm, 1); renderList1(); $('[data-next]').disabled = !files.length; } });
     $('[data-files]').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { files.splice(+b.dataset.rm, 1); renderCheck(); $('[data-next]').disabled = !files.length; } });
     $('[data-show]').addEventListener('click', () => {
       const next = files.some(f => kind(f) === 'image') ? 'confirm.html' : 'result.html';

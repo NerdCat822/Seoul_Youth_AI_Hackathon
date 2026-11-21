@@ -58,11 +58,17 @@ html:has([data-topbar] nav) {
 }
 
 /* Keep the desktop templates, and reflow their columns when the content no longer fits. */
+@media (max-width: 1279px) {
+  .ai-shift {
+    transition: none;
+  }
+}
+
 @media (max-width: 1023px) {
   [data-topbar] > div {
     padding-inline: 20px;
   }
-  :is([data-screen='home'], [data-screen='home-guest']) .flex:has(> [data-ai-host]) {
+  :is([data-screen='home'], [data-screen='home-guest'], [data-screen='welcome']) > div:has(> main) {
     display: block;
     padding-inline: 20px;
   }
@@ -73,7 +79,7 @@ html:has([data-topbar] nav) {
     gap: 24px;
   }
   [data-screen='home'] section:has(> [data-mini-cal]),
-  [data-screen='idea'] aside {
+  [data-screen='idea'] main aside {
     position: static;
     width: 100%;
   }
@@ -147,9 +153,6 @@ html:has([data-topbar] nav) {
     overflow: auto;
     overflow-wrap: anywhere;
   }
-  :is([data-screen='home'], [data-screen='home-guest']) .flex:has(> [data-ai-host]) {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
-  }
 }
 
 @media (max-width: 767px) {
@@ -171,11 +174,13 @@ html:has([data-topbar] nav) {
     text-align: center;
     bottom: calc(16px + env(safe-area-inset-bottom));
   }
-  :is([data-screen='home'], [data-screen='home-guest']) .flex:has(> [data-ai-host]) {
+  :is([data-screen='home'], [data-screen='home-guest'], [data-screen='welcome']) > div:has(> main) {
     padding-inline: 16px;
     padding-top: 24px;
   }
-  :is([data-screen='home'], [data-screen='home-guest']) main > :is(.mt-14, .mt-16, .mt-20) {
+  :is([data-screen='home'], [data-screen='home-guest'], [data-screen='welcome'])
+    main
+    > :is(.mt-14, .mt-16, .mt-20) {
     margin-top: 32px;
   }
   [data-screen='home'] .home-records-heading,
@@ -213,12 +218,12 @@ html:has([data-topbar] nav) {
     gap: 6px;
   }
   [data-screen='home'] section > .flex:has(> h2),
-  [data-screen='home-guest'] section > .flex:has(.more-link) {
+  :is([data-screen='home-guest'], [data-screen='welcome']) section > .flex:has(.more-link) {
     flex-wrap: wrap;
     gap: 8px;
   }
-  [data-screen='home-guest'] main > .grid,
-  [data-screen='home-guest'] section .grid,
+  :is([data-screen='home-guest'], [data-screen='welcome']) main > .grid,
+  :is([data-screen='home-guest'], [data-screen='welcome']) section .grid,
   [data-ideas],
   [data-screen='explore'] :is([data-rec], [data-all]),
   [data-screen='index'] [data-list] {
@@ -300,13 +305,25 @@ html:has([data-topbar] nav) {
     margin-top: 12px;
   }
   [data-ai-panel] {
-    inset: 8px 8px max(8px, env(safe-area-inset-bottom));
+    inset: 108px 8px max(8px, env(safe-area-inset-bottom));
     width: auto;
     max-width: none;
   }
-  [data-ai-fab] {
-    bottom: calc(16px + env(safe-area-inset-bottom));
-    right: 16px;
+  [data-screen='welcome'] main > section:first-child {
+    flex-direction: column;
+    min-height: 0;
+  }
+  [data-screen='welcome'] main > section:first-child > div {
+    padding: 24px;
+  }
+  [data-screen='welcome'] main > section:first-child img {
+    flex: none;
+    width: 100%;
+    height: auto;
+  }
+  [data-ai-panel] [data-panel-expand] {
+    white-space: nowrap;
+    padding-inline: 8px;
   }
   [data-chat-root],
   [data-chat-root] [data-chat-form] {

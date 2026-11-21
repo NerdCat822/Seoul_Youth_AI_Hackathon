@@ -1,6 +1,7 @@
 import { getSession, loadAppData, logOut, setSessionToken } from '../api';
 import type { AppData, AuthSession } from '../types';
 import { mountAccountScreen } from './settings';
+import { CHAT_ENABLED } from '../lib/features';
 import { afterLogin, loginForCurrentPage } from './navigation';
 import './responsive.css';
 import './responsive-records.css';
@@ -9,13 +10,14 @@ import {
   installNavigation,
   isServiceScreen,
   loadLayout,
+  navigateTo,
   screenName,
   sectionFor,
 } from './screen-router';
 
 const page = screenName(new URL(location.href));
 document.body.dataset.screen = page;
-const publicPage = ['index', 'login', 'signup', 'home-guest'].includes(page);
+const publicPage = ['index', 'login', 'signup', 'home-guest', 'welcome'].includes(page);
 const authPage = page === 'login' || page === 'signup';
 const sessionChannel =
   typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('trylog-session');
@@ -71,7 +73,11 @@ async function header(session: AuthSession | null, data: AppData | null) {
   if (session?.authenticated && page === 'home-guest')
     document.querySelector<HTMLElement>('header')!.dataset.topbar = '';
   await import('../../design-final/assets/js/icons.js');
+  // The same header also serves routes reached from the full-screen conversation.
+  const fullChat = document.body.dataset.ai === 'off';
+  if (fullChat) delete document.body.dataset.ai;
   await import('../../design-final/assets/js/app.js');
+  if (fullChat) document.body.dataset.ai = 'off';
   window.App.hydrateIcons();
 
   document.addEventListener(
@@ -92,7 +98,7 @@ async function header(session: AuthSession | null, data: AppData | null) {
           void logOut()
             .then(() => {
               sessionChannel?.postMessage('changed');
-              location.replace('login.html');
+              location.replace('welcome.html');
             })
             .catch((error: Error) => window.App.toast(error.message));
         },
@@ -143,7 +149,9 @@ async function mountScreen(
     const { mountAuth } = await import('./auth');
     signal.throwIfAborted();
     await mountAuth(name, session);
-  } else if (['home', 'home-guest', 'explore', 'idea', 'forecast', 'baseline'].includes(name)) {
+  } else if (
+    ['home', 'home-guest', 'welcome', 'explore', 'idea', 'forecast', 'baseline'].includes(name)
+  ) {
     const { mountDashboard } = await import('./dashboard');
     signal.throwIfAborted();
     await mountDashboard(name, data, signal);
@@ -160,7 +168,39 @@ async function mountScreen(
       await mountRecords(name, data, signal);
     }
   }
-  if (!signal.aborted) main.hidden = false;
+  signal.throwIfAborted();
+  main.hidden = false;
+  const toggle = document.querySelector<HTMLButtonElement>('header [data-ai-toggle]');
+  if (!toggle) return;
+  if (name === 'ai' || !CHAT_ENABLED) {
+    toggle.removeAttribute('aria-controls');
+    toggle.removeAttribute('aria-expanded');
+    toggle.ariaLabel = 'AI 대화';
+    toggle.classList.toggle('text-heading', name === 'ai');
+    toggle.addEventListener(
+      'click',
+      () => {
+        if (name === 'ai') main.querySelector<HTMLElement>('[data-chat-input]')?.focus();
+        else navigateTo('ai.html');
+      },
+      { signal },
+    );
+    return;
+  }
+  const { mountChat } = await import('./chat');
+  signal.throwIfAborted();
+  const host = document.createElement('div');
+  document.body.append(host);
+  contentRegion(document).classList.add('ai-shift');
+  signal.addEventListener(
+    'abort',
+    () => {
+      host.remove();
+      document.body.classList.remove('ai-open');
+    },
+    { once: true },
+  );
+  await mountChat(host, true, data, signal);
 }
 
 function serviceNavigation(session: AuthSession, initial: AbortController) {
@@ -196,6 +236,8 @@ function serviceNavigation(session: AuthSession, initial: AbortController) {
       old.replaceWith(next);
       document.body.dataset.nav = layout.nav;
       document.body.dataset.screen = name;
+      document.body.dataset.ai = layout.ai;
+      document.body.dataset.aiHints = layout.aiHints;
       document.title = layout.title;
       refreshNotifications(data);
       window.App.hydrateIcons(next);
@@ -251,8 +293,8 @@ async function start() {
       location.replace(loginForCurrentPage());
       return;
     }
-    if (session.authenticated && authPage) {
-      location.replace(afterLogin());
+    if (session.authenticated && (authPage || page === 'welcome')) {
+      location.replace(authPage ? afterLogin() : 'home.html');
       return;
     }
     const data = session.authenticated ? await loadAppData() : null;

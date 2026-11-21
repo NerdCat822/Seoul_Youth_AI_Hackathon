@@ -1,4 +1,5 @@
 import { asDate } from '../lib/dates';
+import type { Experiment } from '../types';
 
 export function ui() {
   return window.App;
@@ -12,6 +13,10 @@ export function el<T extends HTMLElement = HTMLElement>(selector: string): T {
 
 export function recordUrl(page: string, id: string, options: Record<string, string> = {}) {
   return page + '.html?' + new URLSearchParams({ id, ...options });
+}
+
+export function recordDestination(record: Experiment) {
+  return recordUrl(record.status === 'COMPLETED' ? 'result' : 'record', record.id);
 }
 
 export function daysBetween(start: string, end: string) {
