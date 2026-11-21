@@ -5,6 +5,14 @@ import './voice-input.css';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_DURATION_MS = 60_000;
+// 말을 멈춘 지 이만큼 지나면 말이 끝난 것으로 보고 녹음을 마친다.
+const SILENCE_MS = 1_000;
+// 처음 이만큼은 주변 소음의 크기를 잰다.
+const CALIBRATE_MS = 300;
+// 이만큼은 소리가 나야 말을 시작한 것으로 본다. 컵 내려놓는 소리 같은 짧은 소리는 넘긴다.
+const MIN_SPEECH_MS = 250;
+// 이만큼 기다려도 말소리가 없으면 녹음을 그만둔다.
+const NO_SPEECH_MS = 8_000;
 const MIME_TYPES = [
   'audio/webm',
   'audio/ogg',
@@ -28,10 +36,16 @@ interface Capture {
   stream?: MediaStream;
   recorder?: MediaRecorder;
   timer?: number;
+  meter?: number;
+  context?: AudioContext;
 }
 
 function releaseMicrophone(capture: Capture) {
   window.clearTimeout(capture.timer);
+  window.clearInterval(capture.meter);
+  capture.meter = undefined;
+  capture.context?.close().catch(() => undefined);
+  capture.context = undefined;
   const recorder = capture.recorder;
   if (recorder) {
     recorder.ondataavailable = null;
@@ -97,6 +111,51 @@ export function VoiceInput({
     capture.transcribeOnStop = true;
     setPhase('transcribing');
     capture.recorder.stop();
+  }
+
+  // 마이크 소리 크기를 0.1초마다 잰다. 말을 시작한 뒤 1초 동안 조용하면 녹음을 마친다.
+  function watchSilence(capture: Capture, stream: MediaStream) {
+    const AudioContextClass =
+      window.AudioContext ??
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return; // 소리 크기를 잴 수 없으면 '완료' 버튼으로만 마친다.
+    const context = new AudioContextClass();
+    capture.context = context;
+    context.resume().catch(() => undefined);
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 1024;
+    context.createMediaStreamSource(stream).connect(analyser);
+    const samples = new Float32Array(analyser.fftSize);
+    const startedAt = performance.now();
+    let last = startedAt;
+    let noise = 0;
+    let measured = 0;
+    let voiced = 0;
+    let lastVoice = startedAt;
+    capture.meter = window.setInterval(() => {
+      if (active.current !== capture || capture.recorder?.state !== 'recording') return;
+      analyser.getFloatTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) sum += sample * sample;
+      const level = Math.sqrt(sum / samples.length);
+      const now = performance.now();
+      const step = now - last;
+      last = now;
+      if (now - startedAt < CALIBRATE_MS) {
+        noise += level;
+        measured += 1;
+        return;
+      }
+      const threshold = Math.min(0.08, Math.max(0.015, (noise / Math.max(measured, 1)) * 3));
+      if (level > threshold) {
+        voiced += step;
+        lastVoice = now;
+      } else if (voiced >= MIN_SPEECH_MS && now - lastVoice >= SILENCE_MS) {
+        stopRecording(capture);
+      } else if (voiced < MIN_SPEECH_MS && now - startedAt >= NO_SPEECH_MS) {
+        finish(capture, '말소리가 들리지 않았어요. 다시 눌러 말씀해주세요.');
+      }
+    }, 100);
   }
 
   async function start() {
@@ -175,6 +234,7 @@ export function VoiceInput({
       };
       recorder.start(1000);
       capture.timer = window.setTimeout(() => stopRecording(capture), MAX_DURATION_MS);
+      watchSilence(capture, stream);
       setPhase('recording');
     } catch (reason) {
       finish(capture, microphoneError(reason));
@@ -191,7 +251,7 @@ export function VoiceInput({
   const status = {
     idle: error,
     permission: '브라우저에서 마이크 사용을 허용해주세요.',
-    recording: '녹음 중 · 최대 1분',
+    recording: '듣고 있어요 · 말을 멈추면 1초 뒤 자동으로 보내요',
     transcribing: '말씀하신 내용을 글로 바꾸고 있어요…',
   }[phase];
 

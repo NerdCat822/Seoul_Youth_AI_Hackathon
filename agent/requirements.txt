@@ -7,6 +7,11 @@ httpx==0.28.1
 python-multipart==0.0.34
 pydantic==2.14.4
 
+# 멀티턴 대화 상태를 Postgres 에 둔다 (trylog_agent/memory.py)
+langgraph-checkpoint-postgres==3.2.1
+psycopg[binary]==3.3.9
+psycopg-pool==3.3.3
+
 # 서재원 ML 코드(ml/)를 같은 프로세스에서 쓰기 위한 패키지
 pandas
 numpy
