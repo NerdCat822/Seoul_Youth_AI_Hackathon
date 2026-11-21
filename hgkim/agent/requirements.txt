@@ -1,0 +1,18 @@
+# 트라이로그 에이전트 서버 (Python 3.11)
+fastapi==0.165.0
+uvicorn==0.54.0
+langgraph==1.2.24
+anthropic==2.11.0
+httpx==0.28.1
+pydantic==2.14.4
+
+# 서재원 ML 코드(jaewon/ml)를 같은 프로세스에서 쓰기 위한 패키지
+pandas
+numpy
+lightgbm
+scikit-learn
+joblib
+sqlalchemy
+
+# 테스트
+pytest
