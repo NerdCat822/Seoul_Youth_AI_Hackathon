@@ -1,0 +1,3 @@
+# 샘플 자료(CSV)는 Git에 올리지 않는다. 서버에는 ml/data/ 에 둔다.
+data/
+__pycache__/

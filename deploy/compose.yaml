@@ -14,7 +14,7 @@
 #   백엔드 JAR : backend/ 에서 gradlew clean build  → backend/build/libs/trylog-backend-0.0.1-SNAPSHOT.jar
 #   프런트 빌드: frontend/ 에서 npm ci && npx vite build --base=/try-log/  → frontend/dist
 #   에이전트   : 루트 .env 에 ANTHROPIC_API_KEY=... (없으면 규칙 기반으로만 답한다)
-#                jaewon/ml (ml2.zip 을 푼 폴더), jaewon/data (CSV 8개). 둘 다 Git 에 없다.
+#                ml/ (예측 코드·모델, Git 에 있음), ml/data/ (샘플 CSV 8개, Git 에 없음. 서버에 직접 둔다)
 #
 # 띄우기 (deploy/ 에서). DB 비밀번호는 파일에 적지 않고 실행할 때만 넘긴다.
 #   DB_PASSWORD="$(docker exec postgres-db printenv POSTGRES_PASSWORD)" docker compose up -d --build
@@ -62,7 +62,7 @@ services:
 
   agent:
     build:
-      context: ../hgkim/agent
+      context: ../agent
     image: trylog-agent:local
     container_name: trylog-agent
     restart: unless-stopped
@@ -78,19 +78,21 @@ services:
       TRYLOG_REQUIRE_LOGIN: "1" # 공개 주소에 열려 있다. 로그인을 확인할 수 없는 요청은 받지 않는다
       TRYLOG_STORE_ID: ${TRYLOG_STORE_ID:-1}
       TRYLOG_DEMO_DATE: ${TRYLOG_DEMO_DATE:-}
+      TRYLOG_ML_DIR: /srv/ml
+      CSV_DIR: /srv/ml/data
     ports:
       - "127.0.0.1:7500:7500" # 서버 안에서만
     volumes:
       # 폴더가 없으면 Docker가 빈 폴더를 만들지 않고 멈추게 한다(빈 폴더로 뜨면 예측만 조용히 꺼진다).
       - type: bind
-        source: ../jaewon/ml
-        target: /srv/jaewon/ml
+        source: ../ml
+        target: /srv/ml
         read_only: true
         bind:
           create_host_path: false
       - type: bind
-        source: ../jaewon/data
-        target: /srv/jaewon/data
+        source: ../ml/data
+        target: /srv/ml/data
         read_only: true
         bind:
           create_host_path: false

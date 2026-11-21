@@ -18,7 +18,7 @@ def _find_repo_root() -> Path:
     for parent in PACKAGE_DIR.parents:
         if (parent / ".git").exists() or (parent / "HACKATHON_PLAN.md").exists():
             return parent
-    return AGENT_DIR.parent.parent
+    return AGENT_DIR.parent
 
 
 REPO_ROOT = _find_repo_root()
@@ -102,8 +102,8 @@ def get_settings() -> Settings:
         store_id=int(os.getenv("TRYLOG_STORE_ID", "1")),
         forecast_source=forecast_source,
         demo_date=(os.getenv("TRYLOG_DEMO_DATE") or "").strip() or None,
-        csv_dir=Path(os.getenv("CSV_DIR") or (REPO_ROOT / "jaewon" / "data")).resolve(),
-        ml_dir=Path(os.getenv("TRYLOG_ML_DIR") or (REPO_ROOT / "jaewon" / "ml")).resolve(),
+        csv_dir=Path(os.getenv("CSV_DIR") or (REPO_ROOT / "ml" / "data")).resolve(),
+        ml_dir=Path(os.getenv("TRYLOG_ML_DIR") or (REPO_ROOT / "ml")).resolve(),
         ml_enabled=_flag("TRYLOG_ML_ENABLED", True),
         # 아래 둘은 Spring 쪽 계약이 달라졌을 때만 켜는 선택 설정이다. 기본값은 AGENT_API_PLAN.md 그대로다.
         spring_fields=7 if os.getenv("TRYLOG_SPRING_FIELDS", "5").strip() == "7" else 5,

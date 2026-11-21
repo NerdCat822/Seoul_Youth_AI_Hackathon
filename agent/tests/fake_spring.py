@@ -18,7 +18,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 DEMO_ID = "11111111-1111-4111-8111-111111111111"
-DATA_DIR = Path(os.getenv("CSV_DIR") or Path(__file__).resolve().parents[3] / "jaewon" / "data")
+DATA_DIR = Path(os.getenv("CSV_DIR") or Path(__file__).resolve().parents[2] / "ml" / "data")
 CATEGORIES = {"MENU", "OPERATION", "MARKETING"}
 BASE_FIELDS = {"title", "category", "startDate", "endDate", "notes"}
 

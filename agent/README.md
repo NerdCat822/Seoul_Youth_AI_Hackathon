@@ -4,14 +4,14 @@
 
 - 포트: 이 서버 **7500**, Spring **7000** (`TRYLOG_SPRING_URL`로 바꾼다)
 - LLM: `claude-sonnet-5-5`. 키가 없거나 호출이 실패하면 규칙 기반 경로로 답한다(`source`가 `RULES`).
-- 필요한 것: Python 3.11, `jaewon/ml`(서재원의 `ml2.zip`을 푼 폴더), `jaewon/data`(CSV 8개). 둘 다 Git에는 없다.
+- 필요한 것: Python 3.11, 저장소 루트의 `ml/`(서재원의 예측 코드·모델, Git에 있음)과 `ml/data/`(샘플 CSV 8개, Git에 없음).
 
 ## 실행
 
 프로젝트 루트의 `.env`에 `ANTHROPIC_API_KEY=...` 한 줄을 둔다. `.env`는 Git에 올리지 않는다.
 
 ```bash
-cd hgkim/agent
+cd agent
 python3.11 -m venv .venv
 ./.venv/bin/python -m pip install -r requirements.txt
 ./.venv/bin/python -m uvicorn trylog_agent.main:app --host 127.0.0.1 --port 7500
@@ -24,7 +24,7 @@ python3.11 -m venv .venv
 
 ### Docker로 띄우기
 
-`deploy/compose.yaml`이 Spring(`trylog-api`, 7000)과 이 서버(`trylog-agent`, 7500)를 같은 Docker 네트워크에 띄우고 서로 연결한다. 이미지는 이 폴더의 `Dockerfile`로 만든다. `jaewon/ml`과 `jaewon/data`는 이미지에 넣지 않고 띄울 때 붙인다.
+`deploy/compose.yaml`이 Spring(`trylog-api`, 7000)과 이 서버(`trylog-agent`, 7500)를 같은 Docker 네트워크에 띄우고 서로 연결한다. 이미지는 이 폴더의 `Dockerfile`로 만든다. `ml/`과 `ml/data/`는 이미지에 넣지 않고 띄울 때 붙인다.
 
 ```bash
 cd deploy
@@ -49,6 +49,8 @@ Docker에서는 이 저장소의 Spring에 맞춰 `TRYLOG_SPRING_URL=http://tryl
 `health`를 뺀 에이전트 경로는 로그인한 가게만 쓸 수 있다. 화면이 보낸 세션 쿠키와 `X-CSRF-TOKEN`을 Spring 호출에 그대로 넘겨, Spring이 그 가게의 요청으로 처리한다. 대상 메뉴도 로그인한 가게의 메뉴(Spring `/menus`)에서 찾는다. 로그인하지 않은 요청은 401이다.
 
 ## 음성 입력 (STT)
+
+다른 개발자에게 공유할 사용법은 [STT_API.md](STT_API.md)에 따로 정리했다.
 
 `POST /api/v1/agent/stt`는 브라우저나 앱이 녹음한 짧은 말을 OpenAI 음성 전사 API(`gpt-4o-mini-transcribe`)로 한국어 글로 바꾼다. 로그인한 가게만 쓸 수 있다(요금이 든다). 화면은 만들지 않았다.
 
@@ -93,4 +95,4 @@ curl -X POST http://127.0.0.1:7500/api/v1/agent/stt -H "Cookie: JSESSIONID=..." 
 | `TRYLOG_STT_TIMEOUT` | `20` | 음성 전사 한 번의 제한 시간(초) |
 | `TRYLOG_STT_MAX_BYTES` | `5242880` | 받을 녹음 파일의 최대 크기(5MB). 넘으면 413 |
 | `TRYLOG_REQUIRE_LOGIN` | `0` | `1`이면 Spring에 로그인을 확인할 수 없을 때 요청을 받지 않는다. 공개 주소에 여는 배포에서 켠다 |
-| `CSV_DIR`, `TRYLOG_ML_DIR` | `jaewon/data`, `jaewon/ml` | 자료와 서재원 코드의 위치 |
+| `CSV_DIR`, `TRYLOG_ML_DIR` | `ml/data`, `ml` | 자료와 서재원 코드의 위치 |
