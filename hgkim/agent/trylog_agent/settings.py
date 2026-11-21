@@ -72,6 +72,7 @@ class Settings:
     ml_enabled: bool
     spring_fields: int
     report_preview: bool
+    require_login: bool
 
     @property
     def has_llm_key(self) -> bool:
@@ -104,4 +105,6 @@ def get_settings() -> Settings:
         # 아래 둘은 Spring 쪽 계약이 달라졌을 때만 켜는 선택 설정이다. 기본값은 AGENT_API_PLAN.md 그대로다.
         spring_fields=7 if os.getenv("TRYLOG_SPRING_FIELDS", "5").strip() == "7" else 5,
         report_preview=_flag("TRYLOG_REPORT_PREVIEW", False),
+        # 공개 주소에 여는 배포에서는 켠다. Spring에 로그인을 확인할 수 없으면 요청을 받지 않는다.
+        require_login=_flag("TRYLOG_REQUIRE_LOGIN", False),
     )

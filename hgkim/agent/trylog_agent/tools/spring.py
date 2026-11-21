@@ -8,6 +8,7 @@ from __future__ import annotations
 import httpx
 
 from ..settings import get_settings
+from . import login
 
 API_PREFIX = "/api/v1"
 
@@ -51,6 +52,10 @@ class SpringClient:
         self._client = client or httpx.Client(base_url=base_url, timeout=timeout)
 
     def _request(self, method: str, path: str, **kwargs) -> httpx.Response:
+        # 화면이 보낸 로그인 쿠키와 CSRF 토큰을 그대로 넘긴다. Spring이 그 가게의 요청으로 처리한다.
+        forwarded = login.forwarded_headers()
+        if forwarded:
+            kwargs["headers"] = {**forwarded, **(kwargs.get("headers") or {})}
         try:
             response = self._client.request(method, API_PREFIX + path, **kwargs)
         except httpx.HTTPError as exc:
@@ -62,6 +67,14 @@ class SpringClient:
         if response.status_code >= 400:
             raise SpringRejected(response.status_code, _json(response))
         return response
+
+    def session(self) -> dict:
+        """로그인 상태. `{authenticated, storeId, storeName, ...}`. 로그인 기능이 없는 Spring은 404다."""
+        return _json(self._request("GET", "/auth/session"))
+
+    def menus(self) -> list[dict]:
+        data = self._request("GET", "/menus").json()
+        return data if isinstance(data, list) else []
 
     def overview(self) -> dict:
         return _json(self._request("GET", "/overview"))

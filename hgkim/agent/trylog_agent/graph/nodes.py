@@ -15,13 +15,13 @@ from langgraph.types import interrupt
 
 from .. import llm
 from ..settings import get_settings
-from ..tools import ml, rules
+from ..tools import login, ml, rules
 from ..tools.dates import (
     PeriodParts, apply_period_change, fmt_md, fmt_md_w, parse_duration, parse_iso, parse_period, parse_point,
     resolve_new_period, validate_period,
 )
 from ..tools.guard import allowed_numbers, unknown_numbers
-from ..tools.menus import Menu, find_by_code, find_menus, load_menus_csv, resolve_choice
+from ..tools.menus import Menu, find_by_code, find_menus, load_menus_csv, menus_from_spring, resolve_choice
 from ..tools.spring import SpringError, SpringNotFound, SpringRejected, SpringUnavailable, get_spring
 from .state import AgentState, ExplainState
 
@@ -45,9 +45,25 @@ def remaining(config: RunnableConfig | None) -> float | None:
     return None if deadline is None else max(0.0, deadline - time.monotonic())
 
 
+_MENU_TTL = 60.0
+_spring_menus: dict[int, tuple[float, tuple[Menu, ...]]] = {}
+
+
 def get_menus() -> tuple[Menu, ...]:
-    settings = get_settings()
-    return load_menus_csv(str(settings.csv_dir), settings.store_id)
+    """대상 메뉴를 찾을 목록. 로그인한 가게면 Spring이 주는 그 가게의 메뉴를, 아니면 표본 CSV를 쓴다."""
+    store_id = login.logged_in_store()
+    if store_id is None:
+        settings = get_settings()
+        return load_menus_csv(str(settings.csv_dir), settings.store_id)
+    cached = _spring_menus.get(store_id)
+    if cached and time.monotonic() - cached[0] < _MENU_TTL:
+        return cached[1]
+    try:
+        menus = menus_from_spring(get_spring().menus())
+    except SpringError:
+        return cached[1] if cached else ()
+    _spring_menus[store_id] = (time.monotonic(), menus)
+    return menus
 
 
 def resolve_today() -> tuple[date, str | None]:

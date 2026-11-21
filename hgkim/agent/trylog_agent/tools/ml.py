@@ -15,6 +15,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from ..settings import get_settings
+from . import login
 
 log = logging.getLogger("trylog.ml")
 MSG_NO_SAMPLE = "이 시도는 표본 자료에 없어 예상 매출을 계산할 수 없어요."
@@ -85,9 +86,9 @@ def _sample_rows(csv_dir: str) -> tuple[dict, ...]:
 
 
 def sample_experiments(store_id: int | None = None) -> list[dict]:
-    """`3_experiments.csv`의 표본 시도. 가게를 주면 그 가게 것만 돌려준다."""
+    """`3_experiments.csv`의 표본 시도. 가게를 주지 않으면 로그인한 가게(없으면 설정값) 것을 돌려준다."""
     settings = get_settings()
-    sid = str(settings.store_id if store_id is None else store_id)
+    sid = str(login.current_store_id() if store_id is None else store_id)
     return [row for row in _sample_rows(str(settings.csv_dir)) if str(row.get("store_id", "")).strip() == sid]
 
 

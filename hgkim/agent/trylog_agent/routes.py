@@ -6,14 +6,15 @@ import time
 import uuid
 from collections import OrderedDict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Request
+from fastapi.concurrency import run_in_threadpool
 from langgraph.types import Command
 
 from . import llm
 from .graph.build import chat_graph, draft_graph, explain_graph
 from .schemas import ApiError, ChatRequest, ChatResponse, DraftRequest, DraftResponse, ExplainResponse, HealthResponse
 from .settings import get_settings
-from .tools import ml, rules
+from .tools import login, ml, rules
 from .tools.spring import SpringError, SpringNotFound, get_spring
 
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
 TEXT_MAX = 500
 MAX_THREADS = 300
 _threads: "OrderedDict[str, threading.Lock]" = OrderedDict()
+_thread_stores: dict[str, int] = {}   # 대화가 어느 가게의 것인지. 다른 가게는 이어 쓸 수 없다.
 _threads_guard = threading.Lock()
 
 
@@ -40,23 +42,56 @@ def _config(thread_id: str | None = None) -> dict:
     return {"configurable": configurable}
 
 
+async def login_context(request: Request) -> None:
+    """화면이 보낸 세션 쿠키와 CSRF 토큰을 이 요청의 Spring 호출에 넘기도록 적어 둔다."""
+    headers = {}
+    if request.headers.get("cookie"):
+        headers["Cookie"] = request.headers["cookie"]
+    if request.headers.get("x-csrf-token"):
+        headers["X-CSRF-TOKEN"] = request.headers["x-csrf-token"]
+    login.forward(headers)
+    login.set_store(None)
+
+
+async def require_login(request: Request) -> None:
+    """로그인한 가게만 쓰게 한다. LLM을 부르는 경로와 가게 자료를 읽는 경로에 건다.
+
+    Spring에 세션을 물어 확인한다. Spring이 로그인하지 않았다고 답하면 항상 401이다.
+    Spring에 물어볼 수 없을 때(꺼져 있거나 로그인 기능이 없는 서버)는 설정을 따른다.
+    `TRYLOG_REQUIRE_LOGIN=1`이면 받지 않고, 아니면 혼자 개발할 때처럼 통과시킨다.
+    """
+    await login_context(request)
+    try:
+        session = await run_in_threadpool(get_spring().session)
+    except SpringError:
+        if get_settings().require_login:
+            raise ApiError(502, "UPSTREAM_ERROR", "로그인을 확인할 수 없어요. 잠시 뒤 다시 시도해 주세요.") from None
+        return
+    if not session.get("authenticated") or session.get("storeId") is None:
+        raise ApiError(401, "UNAUTHENTICATED", "로그인이 필요해요.")
+    login.set_store(int(session["storeId"]))
+
+
 def _thread_lock(thread_id: str | None) -> tuple[str, threading.Lock]:
-    """아는 대화면 그 대화의 잠금을, 없거나 모르는 값이면 새 대화를 돌려준다."""
+    """아는 대화면 그 대화의 잠금을, 없거나 모르는 값이거나 다른 가게의 대화면 새 대화를 돌려준다."""
+    store_id = login.current_store_id()
     with _threads_guard:
-        if thread_id and thread_id in _threads:
+        if thread_id and thread_id in _threads and _thread_stores.get(thread_id) == store_id:
             _threads.move_to_end(thread_id)
             return thread_id, _threads[thread_id]
         new_id = str(uuid.uuid4())
         _threads[new_id] = threading.Lock()
+        _thread_stores[new_id] = store_id
         while len(_threads) > MAX_THREADS:
             old_id, _ = _threads.popitem(last=False)
+            _thread_stores.pop(old_id, None)
             saver = chat_graph().checkpointer
             if hasattr(saver, "delete_thread"):
                 saver.delete_thread(old_id)
         return new_id, _threads[new_id]
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse, dependencies=[Depends(login_context)])
 def health() -> dict:
     settings = get_settings()
     spring_today = None
@@ -74,7 +109,7 @@ def health() -> dict:
     }
 
 
-@router.post("/draft", response_model=DraftResponse)
+@router.post("/draft", response_model=DraftResponse, dependencies=[Depends(require_login)])
 def draft(body: DraftRequest) -> dict:
     """한마디를 시도 초안으로 바꾼다. 대화 상태를 만들지 않는다."""
     text = _clean(body.text, "text")
@@ -88,7 +123,7 @@ def draft(body: DraftRequest) -> dict:
     }
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_login)])
 def chat(body: ChatRequest) -> dict:
     """대화로 초안을 만들고, 고치고, 확인을 받은 뒤 저장한다."""
     message = _clean(body.message, "message")
@@ -127,7 +162,8 @@ def _response(thread_id: str, status: str, reply: str, values: dict) -> dict:
     }
 
 
-@router.post("/experiments/{experiment_id}/explain", response_model=ExplainResponse)
+@router.post("/experiments/{experiment_id}/explain", response_model=ExplainResponse,
+             dependencies=[Depends(require_login)])
 def explain(experiment_id: str) -> dict:
     """보고서의 숫자로 결과 설명과 다음 시도 제안을 쓴다."""
     state = explain_graph().invoke({"experiment_id": experiment_id}, _config())
@@ -142,7 +178,7 @@ def explain(experiment_id: str) -> dict:
     }
 
 
-@router.get("/experiments/{experiment_id}/forecast")
+@router.get("/experiments/{experiment_id}/forecast", dependencies=[Depends(require_login)])
 def forecast(experiment_id: str) -> dict:
     """Spring 시도를 표본 시도에 맞춰 서재원의 예측을 돌려준다."""
     try:
