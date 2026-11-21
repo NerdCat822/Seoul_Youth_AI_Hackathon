@@ -7,7 +7,7 @@ import './styles.css';
 function openHome() {
   const path = location.hash.slice(1).split('?')[0];
   if (path && path !== '/') return false;
-  location.replace(new URL('design-final/home.html', location.href));
+  location.replace(new URL('design-final/home-guest.html', location.href));
   return true;
 }
 if (!openHome()) {

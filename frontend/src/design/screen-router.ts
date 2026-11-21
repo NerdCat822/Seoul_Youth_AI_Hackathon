@@ -1,7 +1,6 @@
 // Only service screens sharing the authenticated top bar can use this document.
 const sections = new Map([
   ['home', 'home'],
-  ['home-guest', 'home'],
   ['forecast', 'home'],
   ['ai', 'home'],
   ['explore', 'explore'],

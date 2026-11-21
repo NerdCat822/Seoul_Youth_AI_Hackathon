@@ -1,7 +1,7 @@
 import { readRoute } from '../lib/route';
 
 const routes: Record<string, string> = {
-  '/': 'welcome',
+  '/': 'home-guest',
   '/login': 'login',
   '/signup': 'signup',
   '/forecast': 'forecast',

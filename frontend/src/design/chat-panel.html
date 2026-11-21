@@ -4,7 +4,9 @@
   class="ai-panel flex flex-col overflow-hidden rounded-panel border border-line-light bg-white shadow-panel"
   aria-label="AI 대화"
 >
-  <div class="grid h-20 flex-none grid-cols-[1fr_auto_1fr] items-center px-6">
+  <div
+    class="panel-heading grid h-20 flex-none grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-6"
+  >
     <button
       type="button"
       class="icon-btn justify-self-start"
@@ -16,9 +18,16 @@
     </button>
     <h2 class="text-[18px] font-bold" data-panel-title>대화</h2>
     <span class="flex items-center justify-self-end gap-2">
-      <a href="ai.html" class="btn btn-lg btn-neutral gap-1.5" data-panel-expand
-        >크게 보기 <span data-icon="expand" data-size="16"></span
-      ></a>
+      <a
+        href="ai.html"
+        class="btn btn-lg btn-neutral gap-1.5"
+        data-panel-expand
+        aria-label="크게 보기"
+        title="크게 보기"
+      >
+        <span class="panel-expand-label">크게 보기</span>
+        <span data-icon="expand" data-size="16"></span>
+      </a>
       <button type="button" class="icon-btn" data-ai-close aria-label="대화 닫기">
         <span data-icon="close" data-size="24"></span>
       </button>
