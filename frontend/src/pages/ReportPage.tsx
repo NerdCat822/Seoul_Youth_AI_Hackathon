@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ApiError, compareDatabase, compareSales } from '../api';
+import { API_BASE, ApiError, compareDatabase, compareSales } from '../api';
 import { PageHeading } from '../components/PageHeading';
 import { addDays } from '../lib/dates';
 import { useQuery } from '../lib/useQuery';
@@ -188,7 +188,11 @@ export function UploadPage({
                 <code>base_date, receipt_id, store_id, menu2_cd, price, quantity, is_refunded</code>
               </p>
               {menu && menus.length > 1 ? (
-                <a className="text-action" download href={`/api/v1${path}/sample.csv?${menuQuery}`}>
+                <a
+                  className="text-action"
+                  download
+                  href={`${API_BASE}${path}/sample.csv?${menuQuery}`}
+                >
                   선택한 메뉴의 가상 예시 CSV 내려받기
                 </a>
               ) : (
@@ -199,7 +203,11 @@ export function UploadPage({
                 experiment.startDate === '2026-11-07' &&
                 end === '2026-11-20' && (
                   <p>
-                    <a className="text-action" href="/examples/store1-demo.csv" download>
+                    <a
+                      className="text-action"
+                      href={`${import.meta.env.BASE_URL}examples/store1-demo.csv`}
+                      download
+                    >
                       표본 일별 집계로 구성한 시연 주문 CSV
                     </a>
                   </p>

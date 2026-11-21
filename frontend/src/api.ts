@@ -1,6 +1,9 @@
 import type {
+  AgentChatResponse,
   AppData,
   AuthSession,
+  ChatExchange,
+  ChatSession,
   Experiment,
   ExperimentInput,
   Menu,
@@ -26,6 +29,9 @@ export class ApiError extends Error {
   }
 }
 
+// 배포 경로(Vite base)를 따라간다. 기본값 '/'에서는 '/api/v1', '/try-log/'로 빌드하면 '/try-log/api/v1'.
+export const API_BASE = `${import.meta.env.BASE_URL}api/v1`;
+
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
   const token = csrfToken;
@@ -36,7 +42,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     headers.set('X-CSRF-TOKEN', token);
   }
   try {
-    response = await fetch(`/api/v1${path}`, {
+    response = await fetch(`${API_BASE}${path}`, {
       ...options,
       credentials: 'same-origin',
       cache: 'no-store',
@@ -111,6 +117,22 @@ export function createExperiment(input: ExperimentInput, key: string): Promise<E
     method: 'POST',
     body: JSON.stringify(input),
     headers: { 'Idempotency-Key': key },
+  });
+}
+
+/** 에이전트 서버에 한마디를 보낸다. threadId가 없으면 새 대화가 시작된다. */
+export function sendChat(threadId: string | null, message: string): Promise<AgentChatResponse> {
+  return request<AgentChatResponse>('/agent/chat', {
+    method: 'POST',
+    body: JSON.stringify({ threadId, message }),
+  });
+}
+
+/** 주고받은 말을 대화 내역(DB)에 남긴다. */
+export function saveChatExchange(threadId: string, exchange: ChatExchange): Promise<ChatSession> {
+  return request<ChatSession>(`/chats/${encodeURIComponent(threadId)}/messages`, {
+    method: 'POST',
+    body: JSON.stringify(exchange),
   });
 }
 

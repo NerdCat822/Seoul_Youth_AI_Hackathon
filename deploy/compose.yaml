@@ -1,0 +1,120 @@
+# 트라이로그 서버 배포 (hgkim-mini-pc)
+#
+# 공개 주소: https://hgkim-mini-pc.taild27e83.ts.net/try-log/
+# 경로: Tailscale Funnel → nginx-gateway(/try-log/) → trylog-web → (/api/) trylog-api → postgres-db
+#
+#   서비스        컨테이너       포트   서버 안에서 직접 부를 때
+#   Spring Boot   trylog-api     7000   http://127.0.0.1:7000/api/v1/...
+#   FastAPI       trylog-agent   7500   http://127.0.0.1:7500/api/v1/agent/... , /api/v1/ml/...
+#   화면(nginx)   trylog-web     80     게이트웨이를 거쳐서만 연다
+#
+# 에이전트는 Spring을 http://trylog-api:7000 으로 부른다(시도 저장·조회, 보고서, 전망).
+#
+# 준비 (저장소 루트에서)
+#   백엔드 JAR : backend/ 에서 gradlew clean build  → backend/build/libs/trylog-backend-0.0.1-SNAPSHOT.jar
+#   프런트 빌드: frontend/ 에서 npm ci && npx vite build --base=/try-log/  → frontend/dist
+#   에이전트   : 루트 .env 에 ANTHROPIC_API_KEY=... (없으면 규칙 기반으로만 답한다)
+#                jaewon/ml (ml2.zip 을 푼 폴더), jaewon/data (CSV 8개). 둘 다 Git 에 없다.
+#
+# 띄우기 (deploy/ 에서). DB 비밀번호는 파일에 적지 않고 실행할 때만 넘긴다.
+#   DB_PASSWORD="$(docker exec postgres-db printenv POSTGRES_PASSWORD)" docker compose up -d --build
+#
+# 다시 빌드한 뒤
+#   JAR      : DB_PASSWORD=... docker compose up -d --force-recreate api
+#   에이전트 : DB_PASSWORD=... docker compose up -d --build agent
+#   화면     : dist 폴더를 그대로 읽으므로 다시 띄울 필요 없음
+#
+# 가입과 시도 저장은 열려 있다(TRYLOG_ALLOW_WRITES 기본 true). 가게 자료는 로그인한 가게 것만 보인다.
+# 가입을 닫고 읽기 전용으로 돌리려면 TRYLOG_ALLOW_WRITES=false 를 함께 넘겨 api 를 다시 띄운다.
+# DB 구조가 바뀌면 backend/ops/migrations/ 의 SQL 을 먼저 적용한다(앱은 자동으로 실행하지 않는다).
+name: trylog
+services:
+  api:
+    image: eclipse-temurin:17-jre
+    container_name: trylog-api # 다른 컨테이너가 이 이름으로 찾는다. shared-network에서 겹치지 않게 고정
+    restart: unless-stopped
+    command: ["java", "-jar", "/opt/trylog/api.jar"]
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 7000
+      DB_HOST: postgres-db
+      DB_PORT: 5432
+      DB_NAME: hgkim_postgresql
+      DB_USER: ${DB_USER:-nerdcat822}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      # 로그인 세션 쿠키. 공개 주소가 HTTPS 이므로 Secure 로 두고, 같은 도메인의 다른 서비스로는 보내지 않는다.
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "true"
+      SERVER_SERVLET_SESSION_COOKIE_PATH: /try-log
+      TRYLOG_DEMO_DATE: ${TRYLOG_DEMO_DATE:-}
+      TRYLOG_ALLOW_WRITES: ${TRYLOG_ALLOW_WRITES:-true} # 가입·시도 등록 허용. false 면 읽기 전용
+      JAVA_TOOL_OPTIONS: "-Xmx512m" # 서버 메모리 7.6GB를 다른 서비스와 나눠 쓴다
+    ports:
+      - "127.0.0.1:7000:7000" # 서버 안에서만. 바깥에서는 게이트웨이로 들어온다
+    volumes:
+      - type: bind
+        source: ../backend/build/libs/trylog-backend-0.0.1-SNAPSHOT.jar
+        target: /opt/trylog/api.jar
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - shared-network
+
+  agent:
+    build:
+      context: ../hgkim/agent
+    image: trylog-agent:local
+    container_name: trylog-agent
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file:
+      - path: ../.env # ANTHROPIC_API_KEY. 파일이 없어도 뜬다
+        required: false
+    environment:
+      TRYLOG_SPRING_URL: http://trylog-api:7000
+      TRYLOG_SPRING_FIELDS: "7" # 이 Spring은 actionType 이 필수다
+      TRYLOG_REPORT_PREVIEW: "1" # 이 Spring은 저장된 보고서가 없어 미리보기로 숫자를 읽는다
+      TRYLOG_REQUIRE_LOGIN: "1" # 공개 주소에 열려 있다. 로그인을 확인할 수 없는 요청은 받지 않는다
+      TRYLOG_STORE_ID: ${TRYLOG_STORE_ID:-1}
+      TRYLOG_DEMO_DATE: ${TRYLOG_DEMO_DATE:-}
+    ports:
+      - "127.0.0.1:7500:7500" # 서버 안에서만
+    volumes:
+      # 폴더가 없으면 Docker가 빈 폴더를 만들지 않고 멈추게 한다(빈 폴더로 뜨면 예측만 조용히 꺼진다).
+      - type: bind
+        source: ../jaewon/ml
+        target: /srv/jaewon/ml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../jaewon/data
+        target: /srv/jaewon/data
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - shared-network
+
+  web:
+    image: nginx:alpine
+    container_name: trylog-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    volumes:
+      - type: bind
+        source: ../frontend/dist
+        target: /usr/share/nginx/html
+        read_only: true
+        bind:
+          create_host_path: false
+      - ./web.nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    external: true
+    name: shared-network
