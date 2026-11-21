@@ -13,28 +13,14 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
 }
 
-/* The detail, photo and report panels have fixed desktop sidebars. */
 @media (max-width: 1023px) {
   :is([data-nav='records'], [data-nav='calendar'], [data-nav='settings'], [data-nav='store']) main {
     overflow-wrap: anywhere;
   }
 
-  [data-screen='record'] [data-hero] + div,
-  [data-screen='result'] main > .container-main {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1.5rem;
-  }
-
-  [data-screen='record'] [data-hero] + div > section,
-  [data-screen='result'] main aside,
   [data-screen='confirm'] [data-photo-card] {
     width: 100%;
     min-width: 0;
-  }
-
-  [data-screen='result'] main aside {
-    position: static;
   }
 
   [data-screen='confirm'] [data-grid] {

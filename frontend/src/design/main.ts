@@ -2,7 +2,7 @@ import { getSession, loadAppData, logOut, setSessionToken } from '../api';
 import type { AppData, AuthSession } from '../types';
 import { mountAccountScreen } from './settings';
 import { CHAT_ENABLED } from '../lib/features';
-import { afterLogin, loginForCurrentPage } from './navigation';
+import { afterLogin, loginForPage } from './navigation';
 import './responsive.css';
 import './responsive-records.css';
 import {
@@ -17,8 +17,9 @@ import {
 
 const page = screenName(new URL(location.href));
 document.body.dataset.screen = page;
-const publicPage = ['index', 'login', 'signup', 'home-guest', 'welcome'].includes(page);
+const guestPage = page === 'home-guest' || page === 'welcome';
 const authPage = page === 'login' || page === 'signup';
+const publicPage = guestPage || authPage || page === 'index';
 const sessionChannel =
   typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('trylog-session');
 sessionChannel?.addEventListener('message', () => location.reload());
@@ -70,8 +71,6 @@ async function header(session: AuthSession | null, data: AppData | null) {
       },
     },
   });
-  if (session?.authenticated && page === 'home-guest')
-    document.querySelector<HTMLElement>('header')!.dataset.topbar = '';
   await import('../../design-final/assets/js/icons.js');
   // The same header also serves routes reached from the full-screen conversation.
   const fullChat = document.body.dataset.ai === 'off';
@@ -79,6 +78,25 @@ async function header(session: AuthSession | null, data: AppData | null) {
   await import('../../design-final/assets/js/app.js');
   if (fullChat) document.body.dataset.ai = 'off';
   window.App.hydrateIcons();
+  if (!session?.authenticated) {
+    for (const home of document.querySelectorAll<HTMLAnchorElement>(
+      'header a[href="welcome.html"]',
+    )) {
+      home.href = 'home-guest.html';
+    }
+    const trigger = document.querySelector<HTMLButtonElement>('header [data-ai-toggle]');
+    if (trigger) {
+      const chat = document.createElement('a');
+      chat.href = loginForPage('ai.html');
+      chat.className = trigger.className;
+      chat.setAttribute('aria-label', 'AI 대화');
+      chat.title = 'AI 대화';
+      chat.dataset.aiToggle = '';
+      chat.append(...trigger.childNodes);
+      trigger.replaceWith(chat);
+    }
+    if (guestPage) linkGuestFeatures(document.querySelector('header')!);
+  }
 
   document.addEventListener(
     'click',
@@ -98,7 +116,7 @@ async function header(session: AuthSession | null, data: AppData | null) {
           void logOut()
             .then(() => {
               sessionChannel?.postMessage('changed');
-              location.replace('welcome.html');
+              location.replace('home-guest.html');
             })
             .catch((error: Error) => window.App.toast(error.message));
         },
@@ -106,6 +124,13 @@ async function header(session: AuthSession | null, data: AppData | null) {
     },
     true,
   );
+}
+
+function linkGuestFeatures(root: ParentNode) {
+  for (const link of root.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+    const url = new URL(link.href);
+    if (isServiceScreen(url)) link.href = loginForPage(url.pathname.split('/').pop()! + url.search);
+  }
 }
 
 function selectSection(nav: string) {
@@ -140,7 +165,7 @@ function refreshNotifications(data: AppData) {
 
 async function mountScreen(
   name: string,
-  session: AuthSession,
+  session: AuthSession | null,
   data: AppData | null,
   signal: AbortSignal,
 ) {
@@ -148,14 +173,14 @@ async function mountScreen(
   if (['login', 'signup'].includes(name)) {
     const { mountAuth } = await import('./auth');
     signal.throwIfAborted();
-    await mountAuth(name, session);
+    await mountAuth(name, session ?? undefined);
   } else if (
     ['home', 'home-guest', 'welcome', 'explore', 'idea', 'forecast', 'baseline'].includes(name)
   ) {
     const { mountDashboard } = await import('./dashboard');
     signal.throwIfAborted();
     await mountDashboard(name, data, signal);
-  } else if (data) {
+  } else if (data && session) {
     if (name === 'ai') {
       const { mountChat } = await import('./chat');
       signal.throwIfAborted();
@@ -169,10 +194,14 @@ async function mountScreen(
     }
   }
   signal.throwIfAborted();
+  if (guestPage && !session?.authenticated) linkGuestFeatures(main);
   main.hidden = false;
-  const toggle = document.querySelector<HTMLButtonElement>('header [data-ai-toggle]');
+  const toggle = document.querySelector<HTMLElement>('header [data-ai-toggle]');
   if (!toggle) return;
+  // Detail columns and the mini calendar also use this container when chat is disabled.
+  if (name !== 'ai') contentRegion(document).classList.add('ai-shift');
   if (name === 'ai' || !CHAT_ENABLED) {
+    if (toggle instanceof HTMLAnchorElement) return;
     toggle.removeAttribute('aria-controls');
     toggle.removeAttribute('aria-expanded');
     toggle.ariaLabel = 'AI 대화';
@@ -187,11 +216,8 @@ async function mountScreen(
     );
     return;
   }
-  const { mountChat } = await import('./chat');
-  signal.throwIfAborted();
   const host = document.createElement('div');
   document.body.append(host);
-  contentRegion(document).classList.add('ai-shift');
   signal.addEventListener(
     'abort',
     () => {
@@ -200,7 +226,16 @@ async function mountScreen(
     },
     { once: true },
   );
-  await mountChat(host, true, data, signal);
+  if (data) {
+    const { mountChat } = await import('./chat');
+    signal.throwIfAborted();
+    await mountChat(host, true, data, signal);
+  } else {
+    const { mountGuestChatPanel } = await import('./chat-panel');
+    signal.throwIfAborted();
+    mountGuestChatPanel(host, signal);
+    linkGuestFeatures(host);
+  }
 }
 
 function serviceNavigation(session: AuthSession, initial: AbortController) {
@@ -221,7 +256,7 @@ function serviceNavigation(session: AuthSession, initial: AbortController) {
       const [layout, current] = await Promise.all([loadLayout(url, signal), getSession(signal)]);
       signal.throwIfAborted();
       if (!current.authenticated) {
-        location.replace(loginForCurrentPage());
+        location.replace(loginForPage());
         return;
       }
       if (current.storeId !== session.storeId || current.loginId !== session.loginId) {
@@ -278,29 +313,32 @@ async function start() {
     }
     main.hidden = false;
   } else {
-    const session = await getSession();
-    setSessionToken(session.csrfToken);
+    const session = await getSession().catch((error: unknown) => {
+      if (guestPage) return null;
+      throw error;
+    });
+    setSessionToken(session?.csrfToken ?? '');
     window.addEventListener('trylog-session-refreshed', (event) => {
       const current = (event as CustomEvent<AuthSession>).detail;
       if (
-        session.authenticated !== current.authenticated ||
-        session.loginId !== current.loginId ||
-        session.storeId !== current.storeId
+        session?.authenticated !== current.authenticated ||
+        session?.loginId !== current.loginId ||
+        session?.storeId !== current.storeId
       )
         location.reload();
     });
-    if (!session.authenticated && !publicPage) {
-      location.replace(loginForCurrentPage());
+    if (!session?.authenticated && !publicPage) {
+      location.replace(page === 'home' ? 'home-guest.html' : loginForPage());
       return;
     }
-    if (session.authenticated && (authPage || page === 'welcome')) {
+    if (session?.authenticated && (authPage || guestPage)) {
       location.replace(authPage ? afterLogin() : 'home.html');
       return;
     }
-    const data = session.authenticated ? await loadAppData() : null;
+    const data = session?.authenticated ? await loadAppData() : null;
     await header(session, data);
     const initial = new AbortController();
-    if (session.authenticated && isServiceScreen(new URL(location.href)))
+    if (session?.authenticated && isServiceScreen(new URL(location.href)))
       serviceNavigation(session, initial);
     try {
       await mountScreen(page, session, data, initial.signal);

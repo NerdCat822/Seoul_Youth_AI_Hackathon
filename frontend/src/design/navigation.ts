@@ -5,9 +5,6 @@ export function afterLogin() {
   return valid.test(next) ? next : 'home.html';
 }
 
-export function loginForCurrentPage() {
-  return (
-    'login.html?' +
-    new URLSearchParams({ next: location.pathname.split('/').pop()! + location.search })
-  );
+export function loginForPage(next = location.pathname.split('/').pop()! + location.search) {
+  return 'login.html?' + new URLSearchParams({ next }).toString();
 }

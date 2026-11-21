@@ -255,7 +255,7 @@
     root.className = 'ai-panel flex flex-col overflow-hidden rounded-panel border border-line-light bg-white shadow-panel';
     root.setAttribute('aria-label', 'AI 대화'); root.dataset.aiPanel = ''; root.id = 'ai-panel';
     root.innerHTML = `
-      <div class="grid h-20 flex-none grid-cols-[1fr_auto_1fr] items-center px-6">
+      <div class="grid h-20 flex-none grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-6">
         <button type="button" class="icon-btn justify-self-start" data-panel-list aria-label="대화 목록" aria-expanded="false">${icon('menu', 24)}</button>
         <h2 class="text-[18px] font-bold" data-panel-title>대화</h2>
         <span class="flex items-center justify-self-end gap-2"><a href="ai.html" class="btn btn-lg btn-neutral gap-1.5">크게 보기 ${icon('expand', 16)}</a>

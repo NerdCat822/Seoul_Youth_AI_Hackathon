@@ -37,7 +37,12 @@ function designScreens(): Plugin {
     transformIndexHtml: {
       order: 'pre',
       handler(html, context) {
-        if (!context.path.startsWith('/design-final/')) return;
+        // Vite resolves this public asset under the configured base for every entry page.
+        html = html.replace(
+          '</head>',
+          '  <link rel="icon" href="/favicon.ico" type="image/x-icon">\n</head>',
+        );
+        if (!context.path.startsWith('/design-final/')) return html;
         const gallery = context.filename.endsWith('index.html');
         if (context.filename.endsWith('settings.html')) {
           html = html.replace(/(id="se-(?:id|pw)"[^>]*?) value="[^"]*"/g, '$1');

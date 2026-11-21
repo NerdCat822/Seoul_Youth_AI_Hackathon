@@ -74,8 +74,13 @@ export async function mountAuth(page: string, session?: AuthSession) {
   const state = session ?? (await getSession());
   setSessionToken(state.csrfToken);
   const field = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const destination = afterLogin();
+  const onward = new URLSearchParams(location.search).has('next')
+    ? '?' + new URLSearchParams({ next: destination })
+    : '';
   if (page === 'login') {
     const form = document.querySelector<HTMLFormElement>('[data-login]')!;
+    form.querySelector<HTMLAnchorElement>('a[href="signup.html"]')!.href = 'signup.html' + onward;
     const title = form.querySelector('h1')!;
     const logo = new Image(92, 28);
     logo.src = 'assets/img/logo.svg';
@@ -98,7 +103,7 @@ export async function mountAuth(page: string, session?: AuthSession) {
       button.disabled = true;
       try {
         announceLogin(await logIn(id.value.trim(), pw.value));
-        location.assign(afterLogin());
+        location.replace(destination);
       } catch (error) {
         formError(form, notice(error));
         button.disabled = false;
@@ -108,6 +113,8 @@ export async function mountAuth(page: string, session?: AuthSession) {
   }
 
   const first = document.querySelector<HTMLFormElement>('form[data-step="1"]')!;
+  first.querySelector<HTMLAnchorElement>('a[href="login.html"]')!.href = 'login.html' + onward;
+  document.querySelector<HTMLAnchorElement>('[data-step="3"] a')!.href = destination;
   const second = document.querySelector<HTMLFormElement>('form[data-step="2"]')!;
   const finish = second.querySelector<HTMLButtonElement>('[type=submit]')!;
   const group = second.querySelector<HTMLElement>('[data-chip-group=single]')!;

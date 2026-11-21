@@ -1,137 +1,149 @@
 .week-summary {
-  padding: clamp(16px, 2.3vw, 28px);
+  min-width: 0;
 }
-.week-heading,
+.week-options,
 .week-tools,
 .week-arrows {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-.week-heading {
-  justify-content: space-between;
   flex-wrap: wrap;
 }
-.week-range,
-.week-tools,
-.week-day dt {
-  color: #646d7b;
-  font-size: 13px;
-}
-.week-range {
-  margin-top: 4px;
+.week-summary > :first-child {
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .week-tools {
-  justify-content: space-between;
-  margin-top: 16px;
+  margin-block: 12px;
+  font-size: 13px;
+  color: #646d7b;
 }
 .week-tools strong {
   margin-inline-start: 4px;
   color: #007851;
 }
 .week-arrows {
-  margin-left: auto;
+  margin-inline-start: auto;
   gap: 4px;
+}
+.week-arrows[hidden],
+.week-tools a[hidden] {
+  display: none;
 }
 .week-arrows button {
   width: 32px;
   height: 32px;
-  border: 1px solid #dce1e2;
+  border: 1px solid #e0e4e2;
 }
 .week-arrows button:disabled {
   opacity: 0.4;
 }
 .week-scroll {
-  margin-top: 8px;
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
-  border: 1px solid #e0e7e4;
-  border-radius: 12px;
 }
 .week-days {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  min-width: 50rem;
+  min-width: 44rem;
 }
 .week-day {
   min-width: 0;
   scroll-snap-align: start;
-  padding: 12px clamp(8px, 0.9vw, 14px) 16px;
-}
-.week-day + .week-day {
-  border-inline-start: 1px solid #e0e7e4;
+  padding: 7px 10px;
+  font-size: 13px;
 }
 .week-day time {
-  display: block;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #e8eeeb;
-  color: #172a21;
-  font-size: 16px;
-  font-weight: 700;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #646d7b;
 }
-.week-day time span {
-  color: #52645a;
-  font-size: 13px;
-  font-weight: 500;
+.week-day time b {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #212c25;
 }
-.week-day dl > div {
-  margin-top: 12px;
+.week-day time[aria-current='date'] {
+  color: #007851;
+}
+.week-day time[aria-current='date'] b {
+  background: #008b5d;
+  color: white;
 }
 .week-day dt {
-  margin-bottom: 3px;
-  font-weight: 500;
+  margin-top: 6px;
+  color: #646d7b;
 }
 .week-day dd {
+  color: #353e38;
   font-size: 13px;
-  line-height: 1.45;
+  word-break: keep-all;
   overflow-wrap: anywhere;
 }
 .week-day .week-amount {
   color: #007851;
-  font-size: clamp(14px, 1.05vw, 17px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.week-weather dd {
-  min-height: 2.9em;
+[data-week-weather] {
   white-space: pre-line;
 }
-.week-tasks {
-  padding-top: 10px;
-  border-top: 1px solid #e8eeeb;
+.week-day .week-tasks {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #646d7b;
 }
+.week-tasks summary,
 .week-tasks a {
-  display: block;
-  color: #293c32;
-  word-break: keep-all;
+  color: #007851;
 }
 .week-tasks a:hover,
 .week-tasks a:focus-visible {
   text-decoration: underline;
 }
-.week-tasks li + li,
-.week-tasks details {
-  margin-top: 7px;
-}
-.week-stage {
-  color: #007851;
-  font-weight: 600;
-}
 .week-tasks summary {
-  color: #007851;
   cursor: pointer;
 }
-.week-muted {
-  color: #646d7b;
+.week-tasks li {
+  margin-top: 6px;
 }
-.home-records-heading {
-  margin-top: clamp(28px, 4vw, 48px);
+.week-lane {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline: 4px;
+  padding-inline: 8px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
 }
-@media (max-width: 767px) {
-  .week-days {
-    min-width: 60rem;
+.week-lane i {
+  background: var(--lane-color);
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+.week-lane.week-check {
+  color: #fff;
+  font-weight: 600;
+}
+.week-lane svg {
+  flex: none;
+}
+.week-lane:hover,
+.week-lane:focus-visible {
+  filter: brightness(0.95);
+}
+@container shift (max-width: 850px) {
+  [data-active-records] {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -1,11 +1,12 @@
 import { request } from '../api';
-import { asDate, formatDate, formatMonth } from '../lib/dates';
+import { formatDate } from '../lib/dates';
 import { CHAT_ENABLED } from '../lib/features';
 import { difficulties } from '../lib/labels';
 import type { Forecast } from '../pages/ForecastPage';
 import type { AppData, Experiment, NeighborhoodCase } from '../types';
 import { publicCases, thumbnailByCaseId } from './case-thumbnails';
 import { loadWeekSales, mountHomeWeek, upcomingDates } from './home-week';
+import { daysBetween, recordUrl } from './record-ui';
 import { navigateTo } from './screen-router';
 
 const categoryStyle = {
@@ -13,7 +14,6 @@ const categoryStyle = {
   OPERATION: { label: '매장 운영', tag: 'cat-store', image: 'bg-cat-store-img' },
   MARKETING: { label: '배달·홍보', tag: 'cat-delivery', image: 'bg-cat-delivery-img' },
 };
-const dayColors = ['#155dfc', '#00b8db', '#ad46ff', '#f6339a'];
 const number = new Intl.NumberFormat('ko-KR');
 const won = (value: number) => number.format(value) + '원';
 const lengthLabel = (days: number) => (days % 7 === 0 ? days / 7 + '주' : days + '일');
@@ -25,8 +25,6 @@ function el<T extends HTMLElement = HTMLElement>(selector: string, root: ParentN
 const text = (selector: string, value: string) => {
   el(selector).textContent = value;
 };
-const dayDiff = (a: string, b: string) =>
-  Math.round((asDate(a).valueOf() - asDate(b).valueOf()) / 86400000);
 const dateRange = (first: string, last: string) => `${formatDate(first)} ~ ${formatDate(last)}`;
 const softNote = (message: string) => `<p class="text-sm text-sub">${window.App.esc(message)}</p>`;
 
@@ -36,7 +34,7 @@ type CaseCardData = Pick<
 > &
   Partial<Pick<NeighborhoodCase, 'durationDays' | 'demo'>>;
 
-function caseCard(item: CaseCardData, compact = false) {
+function caseCard(item: CaseCardData) {
   const c = categoryStyle[item.category];
   const { esc } = window.App;
   const thumbnail = thumbnailByCaseId.get(item.id);
@@ -52,7 +50,7 @@ function caseCard(item: CaseCardData, compact = false) {
     .filter(Boolean)
     .join(' · ');
   return `<a href="idea.html?id=${encodeURIComponent(item.id)}" class="idea-card">
-      ${compact ? '' : art}
+      ${art}
       <div class="body"><span class="cat ${c.tag} self-start">${c.label}</span>
         <p class="mt-3 text-base font-semibold leading-6">${esc(item.title)}</p>
         <p class="text-sm leading-5 text-sub">${esc(item.summary)}</p>
@@ -60,85 +58,44 @@ function caseCard(item: CaseCardData, compact = false) {
 }
 
 function activeCard(item: Experiment, data: AppData) {
-  const { esc } = window.App;
+  const { esc, icon } = window.App;
+  const today = data.overview.today;
   const hot = item.status === 'READY';
-  const today = data.overview.today;
-  const daysLeft = dayDiff(item.checkDate, today);
+  const daysLeft = daysBetween(today, item.checkDate);
+  const countdown =
+    daysLeft === 0 ? 'D-Day' : daysLeft > 0 ? 'D-' + daysLeft : 'D+' + Math.abs(daysLeft);
   const menu = data.menus.find((m) => m.menuCode === item.targetMenuCode)?.menuName;
-  const progress = Math.max(
-    0,
-    Math.min(
-      100,
-      ((dayDiff(today, item.startDate) + 1) /
-        Math.max(1, dayDiff(item.endDate, item.startDate) + 1)) *
-        100,
-    ),
-  );
-  return `<a href="${hot ? 'result' : 'record'}.html?id=${encodeURIComponent(item.id)}" class="block rounded-card bg-white px-5 py-6 transition-shadow hover:shadow-panel ${hot ? 'border-2 border-brand/50 shadow-panel' : 'border border-line-light'}">
-        <div class="flex items-center justify-between gap-3"><h3 class="text-[18px] font-semibold">${esc(item.title)}</h3><span class="badge ${hot ? 'bg-[#fff1f2] text-up' : 'badge-progress'}">${hot ? '확인 필요' : '진행 중'}</span></div>
-        <dl class="mt-4 grid grid-cols-4 gap-4">
-          <div><dt class="text-[13px] text-sub">시작일</dt><dd class="mt-1 text-sm font-medium text-body">${formatDate(item.startDate)}</dd></div>
-          <div><dt class="text-[13px] text-sub">종료일</dt><dd class="mt-1 text-sm font-medium text-body">${formatDate(item.endDate)}</dd></div>
-          <div><dt class="text-[13px] text-sub">결과 확인일</dt><dd class="mt-1 text-sm font-medium text-body">${formatDate(item.checkDate)}
-            <span class="ml-1 text-[13px] font-semibold text-brand">${daysLeft === 0 ? '오늘' : daysLeft > 0 ? daysLeft + '일 뒤' : Math.abs(daysLeft) + '일 전'}</span></dd></div>
-          <div><dt class="text-[13px] text-sub">비교 항목</dt><dd class="mt-1 truncate text-sm font-medium text-body">${esc(menu ?? '메뉴 미지정')}</dd></div>
-        </dl>
-        <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-surface" role="progressbar" aria-label="진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress)}"><div class="h-full rounded-full bg-brand" style="width:${progress}%"></div></div>
-        ${
-          hot
-            ? '<div class="divider my-5"></div><p class="text-[15px] font-medium text-danger">변경 전후 판매 자료를 비교해 보세요.</p>'
-            : ''
-        }
-      </a>`;
-}
-
-function miniCalendar(data: AppData) {
-  const today = data.overview.today;
-  const month = today.slice(0, 7);
-  const first = asDate(month + '-01');
-  const count = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
-  const rows = data.experiments.filter(
-    (r) => r.startDate <= month + '-' + count && r.endDate >= month + '-01',
-  );
-  const grid = el('[data-mini-cal]');
-  const header = grid.closest('section')!;
-  el('h2 a', header).textContent = formatMonth(month);
-  grid.previousElementSibling!.innerHTML = Array.from(
-    '일월화수목금토',
-    (d) => `<span class="py-2">${d}</span>`,
-  ).join('');
-  let markup = '<span></span>'.repeat(first.getUTCDay());
-  for (let day = 1; day <= count; day++) {
-    const date = month + '-' + String(day).padStart(2, '0');
-    const dots = rows
-      .map((r, i) =>
-        date >= r.startDate && date <= r.endDate
-          ? `<i class="h-1 w-1 rounded-full" style="background:${dayColors[i % dayColors.length]}"></i>`
-          : '',
-      )
-      .join('');
-    markup += `<a href="calendar.html" class="flex h-12 flex-col items-center justify-center gap-1 rounded-xl hover:bg-surface-2" aria-label="${formatDate(date)}${date === today ? ' 오늘' : ''}"><span class="flex h-7 w-7 items-center justify-center rounded-full text-sm ${date === today ? 'bg-info font-bold text-white' : 'text-body'}">${day}</span><span class="flex h-1 gap-0.5">${dots}</span></a>`;
-  }
-  grid.innerHTML = markup;
-  el('[data-mini-legend]').innerHTML = rows
-    .map(
-      (r, i) =>
-        `<li class="flex items-center gap-2"><i class="h-2 w-2 rounded-full" style="background:${dayColors[i % dayColors.length]}"></i>${window.App.esc(r.title)} · ${dateRange(r.startDate, r.endDate)}</li>`,
-    )
-    .join('');
+  const elapsed = daysBetween(item.startDate, today) + 1;
+  const duration = Math.max(1, daysBetween(item.startDate, item.endDate) + 1);
+  const progress = Math.min(100, Math.max(0, Math.round((elapsed / duration) * 100)));
+  const category = categoryStyle[item.category];
+  const fields = [
+    ['시작일', item.startDate],
+    ['종료일', item.endDate],
+    ['결과 확인일', item.checkDate],
+  ];
+  const notice = hot
+    ? '변경 전후 판매 자료를 비교해 보세요.'
+    : menu
+      ? menu + ' 주문을 비교해요.'
+      : '결과 확인 시 비교 메뉴를 선택할 수 있어요.';
+  return `<a href="${esc(recordUrl(hot ? 'result' : 'record', item.id))}" class="group block min-w-0 rounded-card bg-white px-5 py-6 transition-shadow hover:shadow-panel ${hot ? 'border-2 border-brand/50 shadow-panel' : 'border border-line-light'}">
+      <span class="cat ${category.tag}">${category.label}</span>
+      <div class="mt-4 flex items-center justify-between gap-3">
+        <h3 class="flex min-w-0 items-center gap-2.5 text-[18px] font-semibold"><span class="flex-none text-brand">${countdown}</span><span class="truncate" title="${esc(item.title)}">${esc(item.title)}</span><span class="flex-none text-sub group-hover:text-heading">${icon('chevron-right', 20)}</span></h3>
+        <span class="badge flex-none ${hot ? 'bg-[#fff1f2] text-up' : item.status === 'PLANNED' ? 'badge-planned' : 'badge-progress'}">${hot ? '확인 필요' : item.status === 'PLANNED' ? '시작 예정' : '진행 중'}</span>
+      </div>
+      <dl class="mt-4 grid grid-cols-3 gap-4">${fields.map(([label, date], i) => `<div class="min-w-0 ${i ? 'border-l border-line-light pl-4' : ''}"><dt class="text-[13px] text-sub">${label}</dt><dd class="mt-1 text-[15px] font-medium text-body"><time datetime="${date}">${formatDate(date)}</time></dd></div>`).join('')}</dl>
+      <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-surface" role="progressbar" aria-label="진행률" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"><div class="h-full rounded-full bg-brand" style="width:${progress}%"></div></div>
+      <div class="divider my-5"></div><p class="text-[15px] ${hot ? 'font-medium text-danger' : 'text-sub'}">${esc(notice)}</p></a>`;
 }
 
 function home(data: AppData, signal: AbortSignal) {
   const { overview, experiments } = data;
-  const title = el('main h1');
-  title.parentElement!.parentElement!.classList.add('home-records-heading');
-  const heading = document.createElement('h2');
-  heading.className = 'section-title';
-  heading.textContent = overview.storeName + ' 기록 현황';
-  title.replaceWith(heading);
-  const week = document.createElement('section');
-  el('main').prepend(week);
-  mountHomeWeek(week, data, signal);
+  const heading = el('main h1');
+  heading.parentElement!.parentElement!.classList.add('home-records-heading');
+  el('span', heading).textContent = overview.storeName;
+  mountHomeWeek(el('section[aria-labelledby="h-week"]'), data, signal);
   const count = (status: Experiment['status']) =>
     experiments.filter((e) => e.status === status).length;
   text('[data-greet]', `결과를 확인할 기록이 ${count('READY')}건 있어요.`);
@@ -154,20 +111,43 @@ function home(data: AppData, signal: AbortSignal) {
         `<a href="records.html?status=${s}" class="group block ${i ? 'border-l border-line-light pl-8' : ''}"><p class="text-sm font-medium text-sub">${label}</p><p class="mt-2 text-2xl font-bold text-brand-strong group-hover:underline">${n}건</p></a>`,
     )
     .join('');
-  const active = experiments.filter((e) => e.status === 'READY' || e.status === 'IN_PROGRESS');
-  el('[data-active-records]').innerHTML =
-    active.map((e) => activeCard(e, data)).join('') || softNote('진행 중인 기록이 없어요.');
-  miniCalendar(data);
+  const active = experiments.filter((record) => record.status !== 'COMPLETED');
+  const tabs = el('[data-rec-tabs]');
+  const categories = [
+    ['all', '전체'],
+    ...Object.entries(categoryStyle).map(([key, style]) => [key, style.label]),
+  ];
+  tabs.innerHTML = categories
+    .map(
+      ([key, label]) =>
+        `<button type="button" role="tab" class="filter-tab" aria-controls="active-cards" data-rec-cat="${key}">${label} <span class="count">${key === 'all' ? active.length : active.filter((r) => r.category === key).length}</span></button>`,
+    )
+    .join('');
+  const cards = el('[data-active-records]');
+  cards.id = 'active-cards';
+  const filter = (selected: string) => {
+    for (const button of tabs.querySelectorAll<HTMLElement>('[data-rec-cat]'))
+      button.setAttribute('aria-selected', String(button.dataset.recCat === selected));
+    const list =
+      selected === 'all' ? active : active.filter((record) => record.category === selected);
+    cards.innerHTML =
+      list.map((record) => activeCard(record, data)).join('') ||
+      '<p class="col-span-full rounded-card border border-line-light py-10 text-center text-[15px] text-sub">이 분야에서 진행 중인 기록이 없어요.</p>';
+  };
+  tabs.addEventListener('click', (event) => {
+    const tab = (event.target as Element).closest<HTMLButtonElement>('[data-rec-cat]');
+    if (tab) filter(tab.dataset.recCat!);
+  });
+  filter('all');
   el('[data-ideas]').innerHTML =
     data.cases
       .slice(0, 3)
-      .map((i) => caseCard(i, true))
+      .map((item) => caseCard(item))
       .join('') || softNote('표시할 동네 사례가 없어요.');
 }
 
-function guest(data: AppData | null, welcome = false) {
-  const entries: CaseCardData[] =
-    data?.cases ?? publicCases.map((item) => ({ ...item, demo: true }));
+function guest(welcome: boolean) {
+  const entries: CaseCardData[] = publicCases.map((item) => ({ ...item, demo: true }));
   const today = entries.filter((item) => item.difficulty === 'EASY').slice(0, 3);
   const free = entries.filter((item) => item.cost === 0);
   const none = '표시할 사례가 없어요.';
@@ -186,9 +166,11 @@ function guest(data: AppData | null, welcome = false) {
   const action = el<HTMLAnchorElement>('a', forecastCard);
   action.href = 'forecast.html';
   action.innerHTML = `예상매출 보기 ${window.App.icon('chevron-right', 16)}`;
-  if (data && !welcome) {
+  if (!welcome) {
     el<HTMLAnchorElement>('main a[href="signup.html"]').href = 'store.html';
-    el('main a[href="store.html"]').textContent = '가게 정보 보기';
+    const setup = el('main a[href="store.html"]').closest('section')!;
+    el('h2', setup).textContent = '우리 가게 정보로 트라이로그를 시작해 보세요';
+    el('p', setup).textContent = '회원가입할 때 가게 이름, 업종과 주소를 등록할 수 있어요.';
   }
 }
 
@@ -396,7 +378,7 @@ function baseline(f: Forecast, data: AppData) {
 
 export async function mountDashboard(page: string, data: AppData | null, signal: AbortSignal) {
   if (page === 'home-guest' || page === 'welcome') {
-    guest(data, page === 'welcome');
+    guest(page === 'welcome');
   } else if (data) {
     switch (page) {
       case 'home':

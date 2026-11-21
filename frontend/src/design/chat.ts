@@ -16,8 +16,7 @@ import type {
   NeighborhoodCase,
 } from '../types';
 import { prepareCase, type CasePhoto } from './case-preparation';
-import panelMarkup from './chat-panel.html?raw';
-import { bindChatPanel } from './chat-panel';
+import { bindChatPanel, renderChatPanel } from './chat-panel';
 import './inputs.css';
 
 const chipCategories = {
@@ -25,6 +24,13 @@ const chipCategories = {
   OPERATION: ['매장 운영', 'cat-store'],
   MARKETING: ['배달·홍보', 'cat-delivery'],
 };
+
+const topicPrompts = new Map([
+  ['free', '비용 없이 손님을 늘리고 싶어요.'],
+  ['review', '리뷰 답글을 어떻게 달면 좋을까요?'],
+  ['lunch', '점심시간에 손님이 줄었어요.'],
+  ['price', '최근 메뉴 가격을 바꿨어요.'],
+]);
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : '잠시 뒤 다시 시도해 주세요.';
@@ -73,10 +79,10 @@ function snapshot(reply: AgentChatResponse): DraftCard | null {
 export async function mountChat(
   host: HTMLElement,
   compact: boolean,
-  data: AppData | null,
+  data: AppData,
   signal: AbortSignal,
 ) {
-  const { esc, icon, toast, hydrateIcons } = window.App;
+  const { esc, icon, toast } = window.App;
   if (!CHAT_ENABLED) {
     if (compact) host.hidden = true;
     else
@@ -84,11 +90,7 @@ export async function mountChat(
         '<p class="note">이 서버에서는 AI 대화가 꺼져 있어요.</p><a class="btn btn-lg btn-primary mt-5" href="../service.html#/new">새 기록 작성</a>';
     return;
   }
-  if (compact) {
-    host.innerHTML = panelMarkup;
-    hydrateIcons(host);
-  }
-  const panel = compact ? host.querySelector<HTMLElement>('[data-ai-panel]')! : host;
+  const panel = compact ? renderChatPanel(host) : host;
   for (const link of panel.querySelectorAll<HTMLAnchorElement>(
     'a[href="upload.html?type=photo"]',
   )) {
@@ -120,7 +122,7 @@ export async function mountChat(
     log.append(
       prepareCase(
         idea,
-        data?.menus ?? [],
+        data.menus,
         existing,
         (selection, message) => {
           photo = selection;
@@ -179,7 +181,7 @@ export async function mountChat(
       cards
         .map((card, i) => {
           const category = chipCategories[card.category as keyof typeof chipCategories];
-          const liveCase = data?.cases.find((item) => item.id === card.caseId);
+          const liveCase = data.cases.find((item) => item.id === card.caseId);
           return `<div class="rounded-card border border-line bg-white ${compact ? 'p-4' : 'p-5'}">
         ${category ? `<span class="cat ${category[1]}">${category[0]}</span>` : ''}
         <p class="mt-3 ${compact ? 'text-sm' : 'text-base'} font-semibold">${esc(card.title)}</p>
@@ -252,10 +254,6 @@ export async function mountChat(
   signal.addEventListener('abort', unsubscribe, { once: true });
   async function send(text: string, voice = false) {
     stopSpeaking();
-    if (!data) {
-      location.assign('login.html');
-      return;
-    }
     const message = text.trim();
     if (!message || busy || voiceBusy) return;
     if (Array.from(message).length > 500) {
@@ -416,7 +414,6 @@ export async function mountChat(
     );
   }
   function mountVoice(open: boolean) {
-    if (!data) return;
     if (!open) stopSpeaking();
     if (open && !voiceRoot) {
       voiceRoot = createRoot(micMount);
@@ -426,14 +423,11 @@ export async function mountChat(
       voiceRoot = null;
     }
   }
-  if (data) {
-    mic.replaceWith(micMount);
-    form.append(speaking);
-  }
+  mic.replaceWith(micMount);
+  form.append(speaking);
   panel.querySelectorAll<HTMLButtonElement>('[data-mic]').forEach((button) => {
     button.onclick = () => {
-      if (!data) location.assign('login.html');
-      else micMount.querySelector('button')?.click();
+      micMount.querySelector('button')?.click();
     };
   });
   let open = true;
@@ -460,7 +454,7 @@ export async function mountChat(
         mountVoice(open);
       },
       (id) => {
-        const idea = data?.cases.find((item) => item.id === id);
+        const idea = data.cases.find((item) => item.id === id);
         if (!idea) return;
         if (busy || voiceBusy) return toast('진행 중인 대화가 끝나면 다시 시도해 주세요.');
         userInteracted = true;
@@ -490,10 +484,6 @@ export async function mountChat(
     }
     search.oninput = filter;
     find('[data-panel-list]').onclick = async () => {
-      if (!data) {
-        location.assign('login.html');
-        return;
-      }
       showList(Boolean(list.hidden));
       if (!list.hidden) {
         try {
@@ -514,7 +504,6 @@ export async function mountChat(
     },
     { signal },
   );
-  if (!data) return;
 
   const mode = params.get('start');
   const idea = data.cases.find((item) => item.id === params.get('idea'));
@@ -529,11 +518,7 @@ export async function mountChat(
         ? previous.title + ' 다음으로 해볼 일을 추천해 주세요.'
         : mode === 'record'
           ? ''
-          : topic === 'free'
-            ? '비용 없이 손님을 늘리고 싶어요.'
-            : topic === 'review'
-              ? '리뷰 답글을 어떻게 달면 좋을까요?'
-              : '';
+          : (topicPrompts.get(topic ?? '') ?? '');
   }
   if (!compact) {
     const carried = expandedDraft?.href === location.href ? expandedDraft : undefined;

@@ -7,6 +7,24 @@ html:has([data-topbar] nav) {
   height: calc(var(--sales-ratio) * 0.8);
 }
 
+.guest-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+}
+.guest-intro > div {
+  flex: 1 1 17rem;
+  min-width: 0;
+}
+.guest-intro > img {
+  flex: 1 1 21rem;
+  min-width: 0;
+  max-width: min(100%, 630px);
+  height: auto;
+  object-fit: contain;
+}
+
 [data-topbar] [data-pop='user'] > .text-sm {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -72,17 +90,6 @@ html:has([data-topbar] nav) {
     display: block;
     padding-inline: 20px;
   }
-  [data-screen='home'] main > div:has([data-mini-cal]),
-  [data-screen='idea'] .container-main {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 24px;
-  }
-  [data-screen='home'] section:has(> [data-mini-cal]),
-  [data-screen='idea'] main aside {
-    position: static;
-    width: 100%;
-  }
   [data-screen='forecast'] [data-bars] > div {
     min-width: 0;
     padding-inline: 6px;
@@ -91,6 +98,9 @@ html:has([data-topbar] nav) {
 
 @media (max-width: 860px) {
   /* Logo/account row followed by four equally sized navigation targets. */
+  [data-ai-panel] {
+    top: 108px;
+  }
   [data-topbar] > div {
     height: auto;
     min-height: 56px;
@@ -193,13 +203,16 @@ html:has([data-topbar] nav) {
   [data-screen='home-guest'] main > section > .btn {
     justify-self: start;
   }
-  [data-screen='home'] [data-summary],
-  [data-active-records] dl {
+  [data-screen='home'] [data-summary] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
-  }
-  [data-screen='home'] [data-summary] {
     padding: 18px;
+  }
+  [data-active-records] dl {
+    gap: 8px;
+  }
+  [data-active-records] dl > div + div {
+    padding-left: 8px;
   }
   [data-screen='home'] [data-summary] a {
     border: 0;
@@ -209,8 +222,7 @@ html:has([data-topbar] nav) {
     border-left: 1px solid #eceef0;
     padding-left: 16px;
   }
-  [data-active-records] h3,
-  [data-mini-legend] li {
+  [data-active-records] h3 {
     overflow-wrap: anywhere;
   }
   [data-active-records] a > .flex {
@@ -305,9 +317,7 @@ html:has([data-topbar] nav) {
     margin-top: 12px;
   }
   [data-ai-panel] {
-    inset: 108px 8px max(8px, env(safe-area-inset-bottom));
-    width: auto;
-    max-width: none;
+    bottom: max(8px, env(safe-area-inset-bottom));
   }
   [data-screen='welcome'] main > section:first-child {
     flex-direction: column;
@@ -354,5 +364,18 @@ html:has([data-topbar] nav) {
   [data-chat-log] :is(a, section) > .flex {
     flex-wrap: wrap;
     gap: 6px;
+  }
+}
+
+@media (max-width: 479px) {
+  [data-ai-panel] .panel-heading {
+    padding-inline: 12px;
+  }
+  [data-ai-panel] [data-panel-expand] {
+    width: 40px;
+    padding: 0;
+  }
+  [data-ai-panel] .panel-expand-label {
+    display: none;
   }
 }
