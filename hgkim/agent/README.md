@@ -43,9 +43,25 @@ Docker에서는 이 저장소의 Spring에 맞춰 `TRYLOG_SPRING_URL=http://tryl
 | POST `/api/v1/agent/chat` `{"threadId","message"}` | 대화로 초안 만들기 → 수정 → "저장" |
 | POST `/api/v1/agent/experiments/{id}/explain` | 보고서 숫자로 결과 설명과 다음 시도 제안 |
 | GET `/api/v1/agent/experiments/{id}/forecast` | Spring 시도를 표본 시도에 맞춰 예측 조회 |
+| POST `/api/v1/agent/stt` multipart `audio` | 녹음한 말을 한국어 글로 바꿈 → `{"text","model","elapsedMs"}` |
 | `/api/v1/ml/...` | 서재원의 예측 경로 5개 |
 
 `health`를 뺀 에이전트 경로는 로그인한 가게만 쓸 수 있다. 화면이 보낸 세션 쿠키와 `X-CSRF-TOKEN`을 Spring 호출에 그대로 넘겨, Spring이 그 가게의 요청으로 처리한다. 대상 메뉴도 로그인한 가게의 메뉴(Spring `/menus`)에서 찾는다. 로그인하지 않은 요청은 401이다.
+
+## 음성 입력 (STT)
+
+`POST /api/v1/agent/stt`는 브라우저나 앱이 녹음한 짧은 말을 OpenAI 음성 전사 API(`gpt-4o-mini-transcribe`)로 한국어 글로 바꾼다. 로그인한 가게만 쓸 수 있다(요금이 든다). 화면은 만들지 않았다.
+
+- 요청: `multipart/form-data`, 필드 이름 `audio`. 형식은 webm·ogg·mp4·m4a·mp3·wav. 파일의 `Content-Type`으로 형식을 알린다(예: `audio/webm;codecs=opus`). 5MB(약 1분) 이하.
+- 응답: `{"text": "오늘부터 이 주 동안 쌀떡볶이에 사장님 추천 스티커를 붙였어요.", "model": "gpt-4o-mini-transcribe", "elapsedMs": 900}`
+- 로그인한 가게의 메뉴 이름을 전사 힌트로 함께 보내 메뉴 이름을 더 정확히 받아 적는다.
+- 오류: 로그인 없음 401, 빈 녹음·지원하지 않는 형식 400, 너무 큼 413, 키 없음·요청 과다 503, OpenAI 실패 502. 오류 문구에 OpenAI의 원문은 싣지 않는다.
+- 받은 글을 그대로 `POST /api/v1/agent/chat`의 `message`로 보내면 말로 대화할 수 있다.
+
+```bash
+# 로그인한 세션 쿠키(JSESSIONID)가 필요하다
+curl -X POST http://127.0.0.1:7500/api/v1/agent/stt -H "Cookie: JSESSIONID=..." -F "audio=@voice.webm;type=audio/webm"
+```
 
 ## 테스트
 
@@ -72,5 +88,9 @@ Docker에서는 이 저장소의 Spring에 맞춰 `TRYLOG_SPRING_URL=http://tryl
 | `TRYLOG_SPRING_FIELDS` | `5` | 저장 요청의 필드 수. `7`이면 `actionType`, `targetMenuCode`를 함께 보낸다 |
 | `TRYLOG_REPORT_PREVIEW` | `0` | `1`이면 저장된 보고서가 없을 때 `/report/preview`를 읽는다 |
 | `TRYLOG_FORECAST_SOURCE` | `spring` | 설명문에 쓰는 예상 매출의 출처. `spring` 또는 `ml` |
+| `OPENAI_API_KEY` | 없음 | 음성 전사 키. 없으면 `/stt`가 503 `STT_UNAVAILABLE` |
+| `TRYLOG_STT_MODEL` | `gpt-4o-mini-transcribe` | 음성 전사 모델 |
+| `TRYLOG_STT_TIMEOUT` | `20` | 음성 전사 한 번의 제한 시간(초) |
+| `TRYLOG_STT_MAX_BYTES` | `5242880` | 받을 녹음 파일의 최대 크기(5MB). 넘으면 413 |
 | `TRYLOG_REQUIRE_LOGIN` | `0` | `1`이면 Spring에 로그인을 확인할 수 없을 때 요청을 받지 않는다. 공개 주소에 여는 배포에서 켠다 |
 | `CSV_DIR`, `TRYLOG_ML_DIR` | `jaewon/data`, `jaewon/ml` | 자료와 서재원 코드의 위치 |

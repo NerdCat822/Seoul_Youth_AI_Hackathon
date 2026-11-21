@@ -73,6 +73,9 @@ class Settings:
     spring_fields: int
     report_preview: bool
     require_login: bool
+    stt_model: str
+    stt_timeout: float
+    stt_max_bytes: int
 
     @property
     def has_llm_key(self) -> bool:
@@ -107,4 +110,8 @@ def get_settings() -> Settings:
         report_preview=_flag("TRYLOG_REPORT_PREVIEW", False),
         # 공개 주소에 여는 배포에서는 켠다. Spring에 로그인을 확인할 수 없으면 요청을 받지 않는다.
         require_login=_flag("TRYLOG_REQUIRE_LOGIN", False),
+        # 음성 입력(OpenAI 음성 전사). 키는 OPENAI_API_KEY 환경변수로만 받는다.
+        stt_model=os.getenv("TRYLOG_STT_MODEL", "gpt-4o-mini-transcribe").strip(),
+        stt_timeout=float(os.getenv("TRYLOG_STT_TIMEOUT", "20")),
+        stt_max_bytes=int(os.getenv("TRYLOG_STT_MAX_BYTES", str(5 * 1024 * 1024))),
     )

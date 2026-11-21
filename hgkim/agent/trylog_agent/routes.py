@@ -6,15 +6,17 @@ import time
 import uuid
 from collections import OrderedDict
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from langgraph.types import Command
 
 from . import llm
 from .graph.build import chat_graph, draft_graph, explain_graph
-from .schemas import ApiError, ChatRequest, ChatResponse, DraftRequest, DraftResponse, ExplainResponse, HealthResponse
+from .graph.nodes import get_menus
+from .schemas import (ApiError, ChatRequest, ChatResponse, DraftRequest, DraftResponse, ExplainResponse, HealthResponse,
+                      SttResponse)
 from .settings import get_settings
-from .tools import login, ml, rules
+from .tools import login, ml, rules, stt
 from .tools.spring import SpringError, SpringNotFound, get_spring
 
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
@@ -106,7 +108,25 @@ def health() -> dict:
         "llmWarmedUp": llm.warmed_up(),
         "springToday": spring_today, "mlReady": ml.ml_ready(), "mlBaseToday": ml_today,
         "dateMatch": bool(spring_today) and spring_today == ml_today,
+        "sttReady": stt.is_ready(), "sttModel": settings.stt_model,
     }
+
+
+@router.post("/stt", response_model=SttResponse, dependencies=[Depends(require_login)])
+async def speech_to_text(audio: UploadFile = File(...)) -> dict:
+    """녹음한 말을 글로 바꾼다. 로그인한 가게만 쓸 수 있다(OpenAI 요금이 든다)."""
+    limit = get_settings().stt_max_bytes
+    data = await audio.read(limit + 1)
+    # 메뉴 이름을 힌트로 준다. 메뉴를 못 읽어도 전사는 한다.
+    try:
+        names = [menu.name for menu in await run_in_threadpool(get_menus)]
+    except Exception:  # noqa: BLE001
+        names = []
+    try:
+        result = await run_in_threadpool(stt.transcribe, data, audio.content_type, stt.menu_prompt(names))
+    except stt.SttError as error:
+        raise ApiError(error.status, error.code, error.message) from None
+    return {"text": result.text, "model": result.model, "elapsedMs": result.elapsed_ms}
 
 
 @router.post("/draft", response_model=DraftResponse, dependencies=[Depends(require_login)])

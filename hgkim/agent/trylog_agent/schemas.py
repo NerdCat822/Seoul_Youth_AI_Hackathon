@@ -92,3 +92,11 @@ class HealthResponse(BaseModel):
     mlReady: bool
     mlBaseToday: Optional[str] = None
     dateMatch: bool
+    sttReady: bool = False
+    sttModel: Optional[str] = None
+
+
+class SttResponse(BaseModel):
+    text: str
+    model: str
+    elapsedMs: int
