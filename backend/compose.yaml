@@ -1,0 +1,30 @@
+name: trylog
+services:
+  api:
+    image: eclipse-temurin:17-jre
+    command: ["java", "-jar", "/opt/trylog/api.jar"]
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      DB_HOST: ${DB_HOST:-postgres-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-hgkim_postgresql}
+      DB_USER: ${DB_USER:-nerdcat822}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      TRYLOG_STORE_ID: ${TRYLOG_STORE_ID:-1}
+      TRYLOG_DEMO_DATE: ${TRYLOG_DEMO_DATE:-}
+      TRYLOG_ALLOW_WRITES: "false"
+    volumes:
+      - type: bind
+        source: ./build/libs/trylog-backend-0.0.1-SNAPSHOT.jar
+        target: /opt/trylog/api.jar
+        read_only: true
+        bind:
+          create_host_path: false
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - shared-network
+networks:
+  shared-network:
+    external: true
+    name: shared-network

@@ -1,0 +1,15 @@
+.gradle/
+.gradle-user-home/
+build/
+target/
+out/
+__pycache__/
+.venv/
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db

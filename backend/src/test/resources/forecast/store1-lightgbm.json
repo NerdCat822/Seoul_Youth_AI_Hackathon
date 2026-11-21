@@ -1,0 +1,41 @@
+{
+  "storeId": 1,
+  "dataThrough": "2026-11-20",
+  "historySha256": "7a1abc2f44517a782a94759856fd391e0be0e2f0771623af494b6e874d5b64d1",
+  "candidate": {
+    "model": "LightGBM 4.6.0",
+    "mae": 80843,
+    "wape": 12.94,
+    "errorRadius": 114047,
+    "days": [
+      {
+        "date": "2026-11-21",
+        "expected": 772372
+      },
+      {
+        "date": "2026-11-22",
+        "expected": 789363
+      },
+      {
+        "date": "2026-11-23",
+        "expected": 626672
+      },
+      {
+        "date": "2026-11-24",
+        "expected": 613996
+      },
+      {
+        "date": "2026-11-25",
+        "expected": 625962
+      },
+      {
+        "date": "2026-11-26",
+        "expected": 619702
+      },
+      {
+        "date": "2026-11-27",
+        "expected": 610550
+      }
+    ]
+  }
+}
