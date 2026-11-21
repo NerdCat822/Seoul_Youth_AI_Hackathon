@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 기록 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="records">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="container-main">
+      <div class="flex items-center justify-between">
+        <div><h1 class="page-title">내 기록</h1><p class="page-desc">바꾼 내용을 기록하고, 결과 확인일에 전후를 비교해요.</p></div>
+        <a href="ai.html?start=record" class="btn btn-xl btn-primary">새 기록 작성하기</a>
+      </div>
+
+      <div class="mt-10 flex flex-wrap gap-1" role="tablist" aria-label="상태" data-status-tabs></div>
+
+      <table class="table mt-5" data-table>
+        <thead><tr><th class="w-[328px]">기록명</th><th class="w-[140px]">상태</th><th class="w-[140px]">시작일</th><th class="w-[140px]">종료일</th><th class="w-[170px]">결과 확인일</th><th>비교 항목</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="mt-5 rounded-card bg-surface-2 py-14 text-center text-base text-sub" data-empty hidden>이 상태의 기록이 없어요.</p>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, esc, params, badge } = App;
+    const D = TRYLOG;
+    const order = ['all', 'check', 'progress', 'planned', 'data', 'done', 'stopped'];
+    let cur = order.includes(params.get('status')) ? params.get('status') : 'all';
+    const href = r => r.status === 'done' ? 'result.html' : `record.html?id=${r.id}`;
+
+    function render() {
+      $('[data-status-tabs]').innerHTML = order.map(s => {
+        const n = s === 'all' ? D.records.length : D.records.filter(r => r.status === s).length;
+        return `<button type="button" role="tab" class="filter-tab" aria-selected="${cur === s}" data-s="${s}">${s === 'all' ? '전체' : D.statusLabel[s]} <span class="count">${n}</span></button>`;
+      }).join('');
+      const rows = D.records.filter(r => cur === 'all' || r.status === cur);
+      $('[data-table] tbody').innerHTML = rows.map(r => `<tr data-href="${href(r)}" tabindex="0">
+        <td class="text-[15px] font-semibold text-heading">${esc(r.title)}</td><td>${badge(r.status)}</td>
+        <td>${r.start}</td><td>${r.end}</td><td>${r.result}${r.resultNote ? ` (${r.resultNote})` : ''}</td><td>${esc(r.compareShort || r.compare)}</td></tr>`).join('');
+      $('[data-table]').hidden = !rows.length; $('[data-empty]').hidden = !!rows.length;
+      history.replaceState(null, '', cur === 'all' ? 'records.html' : `records.html?status=${cur}`);
+    }
+    $('[data-status-tabs]').addEventListener('click', e => { const t = e.target.closest('[data-s]'); if (t) { cur = t.dataset.s; render(); } });
+    const open = e => { const tr = e.target.closest('tr[data-href]'); if (tr) location.href = tr.dataset.href; };
+    $('[data-table]').addEventListener('click', open);
+    $('[data-table]').addEventListener('keydown', e => { if (e.key === 'Enter') open(e); });
+    render();
+  </script>
+</body>
+</html>

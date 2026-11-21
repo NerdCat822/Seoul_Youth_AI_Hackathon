@@ -31,16 +31,11 @@ public class StoreRepository {
     }
 
     public StoreInfo storeInfo() {
+        var account = StorePrincipal.require();
         return jdbc.query("""
-                SELECT s.store_id, s.store_name, u.upjong_cd,
-                       CASE WHEN u.upjong_cd IS NOT NULL THEN u.upjong_nm
-                            WHEN btrim(s.upjong) = '' OR btrim(s.upjong) ~* '^Q[0-9]+$' THEN '업종 미확인'
-                            ELSE s.upjong END AS upjong_nm
-                FROM seoul_youth_ai_hackathon.stores s
-                LEFT JOIN seoul_youth_ai_hackathon.upjongs u ON u.upjong_cd = s.upjong
-                WHERE s.store_id = ?
-                """, (rs, row) -> new StoreInfo(rs.getInt("store_id"), rs.getString("store_name"),
-                rs.getString("upjong_cd"), rs.getString("upjong_nm")), storeId()).stream().findFirst()
+                SELECT upjong_cd, upjong_nm FROM seoul_youth_ai_hackathon.upjongs WHERE store_id = ?
+                """, (rs, row) -> new StoreInfo(account.storeId(), account.storeName(),
+                rs.getString("upjong_cd"), rs.getString("upjong_nm")), account.storeId()).stream().findFirst()
                 .orElseThrow(() -> new NotFoundException("설정한 가게를 찾을 수 없어요."));
     }
 
@@ -49,10 +44,7 @@ public class StoreRepository {
     }
 
     public String storeName() {
-        return jdbc.queryForList("""
-                SELECT store_name FROM seoul_youth_ai_hackathon.stores WHERE store_id = ?
-                """, String.class, storeId()).stream().findFirst()
-                .orElseThrow(() -> new NotFoundException("설정한 가게를 찾을 수 없어요."));
+        return storeInfo().storeName();
     }
 
     public List<Menu> menus() {

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>앞으로 7일 예상매출 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="home">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="mx-auto w-[960px] max-w-full">
+      <h1 class="page-title">앞으로 7일 예상매출</h1>
+      <p class="mt-3 text-base text-sub" data-sub></p>
+
+      <!-- FC-02 예상매출 -->
+      <div data-state="ready">
+        <p class="mt-8 rounded-xl bg-surface px-5 py-3 text-sm font-semibold text-sub">• 시연용 가상 데이터예요. 실제 예측으로 안내하지 않아요.</p>
+        <div class="mt-6 grid grid-cols-3 gap-4" data-stats></div>
+        <section class="mt-6 rounded-panel border border-line bg-white p-6">
+          <h2 class="text-base font-semibold">날짜별 예상매출</h2>
+          <div class="mt-6 flex h-[220px] items-end" data-bars></div>
+          <div class="mt-3 flex" data-xaxis></div>
+        </section>
+        <div class="mt-6 flex items-center justify-between">
+          <p class="text-sm font-semibold text-sub">판매 자료를 더 올리면 전망을 다시 계산해요.</p>
+          <a href="upload.html" class="btn btn-lg btn-neutral">판매 자료 더 올리기</a>
+        </div>
+      </div>
+
+      <!-- FC-01 자료 부족 -->
+      <section class="mt-10 flex flex-col items-center rounded-panel border border-line bg-white px-10 py-14 text-center" data-state="empty" hidden>
+        <h2 class="text-[30px] font-bold">판매 자료가 더 필요해요</h2>
+        <p class="mt-6 text-base text-sub">날짜별 전체 매출을 올려 주시면 앞으로 7일 매출을 미리 볼 수 있어요.</p>
+        <div class="mt-8 h-2 w-[340px] overflow-hidden rounded-full bg-surface" role="progressbar" aria-valuenow="18" aria-valuemin="0" aria-valuemax="90" aria-label="저장한 일별 매출"><div class="h-full w-[20%] rounded-full bg-brand"></div></div>
+        <p class="mt-3 text-sm font-semibold text-sub">저장한 일별 매출 18일 · 최근 3개월(약 90일) 자료를 권장해요</p>
+        <div class="mt-8 w-[480px] rounded-2xl bg-surface-2 p-5 text-left">
+          <p class="text-sm font-semibold">필요한 자료</p>
+          <ul class="mt-2 space-y-1 text-[13px] font-medium text-sub"><li>· 날짜</li><li>· 그날의 전체 매출 (원)</li><li>· POS 사진 · 엑셀을 올리거나 숫자로 직접 입력할 수 있어요</li></ul>
+        </div>
+        <a href="upload.html" class="btn btn-lg btn-primary mt-8">판매 자료 올리기</a>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, $$, won, params } = App;
+    const F = TRYLOG.forecast, empty = params.get('state') === 'empty';
+    $$('[data-state]').forEach(s => (s.hidden = (s.dataset.state === 'empty') !== empty));
+    $('[data-sub]').textContent = '12월 4일(목) ~ 12월 10일(수)' + (empty ? '' : ' · 12월 3일까지 저장한 판매 자료 92일치 기준');
+    if (!empty) {
+      const total = F.reduce((s, f) => s + f.v, 0), max = Math.max(...F.map(f => f.v)), top = F.find(f => f.v === max);
+      $('[data-stats]').innerHTML = [['7일 합계', won(total) + '원', '12월 4일 ~ 12월 10일'], ['하루 평균', won(Math.round(total / 7)) + '원', '7일 평균'],
+        ['가장 많은 날', `12월 ${top.d.split('/')[1]}일 (${top.w})`, won(max) + '원']].map(([k, v, s]) =>
+        `<div class="rounded-panel border border-line bg-white p-5"><p class="text-[13px] font-medium text-sub">${k}</p><p class="mt-2 text-[30px] font-bold leading-9">${v}</p><p class="mt-3 text-[13px] font-medium text-sub">${s}</p></div>`).join('');
+      $('[data-bars]').innerHTML = F.map(f => `<div class="flex h-full flex-1 flex-col items-center justify-end gap-2 px-5">
+        <span class="text-[13px] font-medium text-sub">${won(f.v)}</span><div class="w-full max-w-[64px] rounded-t-md bg-brand" style="height:${f.v / max * 80}%"></div></div>`).join('');
+      $('[data-xaxis]').innerHTML = F.map(f => `<span class="flex-1 text-center text-[13px] font-medium text-sub">${f.d} ${f.w}</span>`).join('');
+    }
+  </script>
+</body>
+</html>

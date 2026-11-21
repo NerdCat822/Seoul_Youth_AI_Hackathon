@@ -161,6 +161,12 @@
   color: var(--muted);
   font-size: 14px;
 }
+.upjong-hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
 .visually-hidden {
   position: absolute;
   width: 1px;

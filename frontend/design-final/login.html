@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header data-topbar="minimal"></header>
+
+  <main class="flex min-h-[calc(100vh-64px)] items-start justify-center px-6 pt-[165px]">
+    <form class="w-[440px] rounded-panel border border-line-light bg-white p-8 shadow-panel" novalidate data-login>
+      <h1 class="text-2xl font-bold">trylog 시작하기</h1>
+      <p class="mt-2 text-sm text-sub">우리 가게의 다음 변화를 함께.</p>
+
+      <div class="mt-8">
+        <label class="label" for="uid">아이디</label>
+        <input class="input" id="uid" name="uid" autocomplete="username" placeholder="아이디를 입력해 주세요">
+      </div>
+      <div class="mt-5">
+        <label class="label" for="pw">비밀번호</label>
+        <input class="input" id="pw" name="pw" type="password" autocomplete="current-password" placeholder="비밀번호를 입력해 주세요">
+        <p class="field-error" data-error hidden></p>
+      </div>
+      <button class="btn btn-lg btn-primary mt-6 w-full" type="submit">로그인</button>
+      <p class="mt-5 text-center text-sm text-sub">처음이신가요? <a href="signup.html" class="ml-1 font-medium text-brand-text hover:underline">회원가입 ›</a></p>
+    </form>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const f = App.$('[data-login]');
+    f.addEventListener('submit', e => {
+      e.preventDefault();
+      const err = App.$('[data-error]', f);
+      const empty = [f.uid, f.pw].filter(i => !i.value.trim());
+      [f.uid, f.pw].forEach(i => i.setAttribute('aria-invalid', String(empty.includes(i))));
+      if (empty.length) { err.textContent = '아이디와 비밀번호를 입력해 주세요.'; err.hidden = false; empty[0].focus(); return; }
+      location.href = 'home.html';
+    });
+  </script>
+</body>
+</html>

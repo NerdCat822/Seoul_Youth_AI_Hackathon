@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>결과 확인 · 자료 올리기 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="records">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="mx-auto w-[840px] max-w-full">
+      <h1 class="page-title">결과 확인</h1>
+      <p class="mt-1 text-sm text-sub">떡볶이 세트 가격 변경 · 결과 확인일 12월 3일(목)</p>
+      <ol class="stepper mt-6" aria-label="결과 확인 단계">
+        <li class="step" data-stepn="1"><span class="num">1</span>자료 올리기</li><li class="bar" aria-hidden="true"></li>
+        <li class="step" data-stepn="2"><span class="num">2</span>자료 확인</li><li class="bar" aria-hidden="true"></li>
+        <li class="step" data-stepn="3"><span class="num">3</span>결과 보기</li>
+      </ol>
+
+      <!-- STEP 1 -->
+      <section data-step="1">
+        <div class="mt-10 flex flex-col items-center rounded-card border-2 border-dashed border-line bg-surface-2 px-6 py-10 text-center transition-colors" data-drop>
+          <span class="text-sub" data-icon="upload" data-size="32"></span>
+          <p class="mt-3 text-base font-semibold">파일을 끌어 놓거나 선택해 주세요</p>
+          <p class="mt-1 text-[13px] text-sub">엑셀 · PDF · 사진 파일을 여러 개 올릴 수 있어요</p>
+          <label class="btn btn-lg btn-primary mt-5 cursor-pointer">파일 선택<input type="file" class="sr-only" multiple accept=".xlsx,.xls,.csv,.pdf,image/*" data-input></label>
+        </div>
+
+        <section class="mt-12">
+          <div class="flex items-center justify-between">
+            <h2 class="section-title">자료 받는 방법</h2>
+            <button type="button" class="btn btn-sm btn-neutral" data-sample><span data-icon="file-excel" data-size="16"></span>샘플 양식 받기</button>
+          </div>
+          <div class="seg mt-4" role="tablist" data-src>
+            <button type="button" role="tab" aria-selected="true" data-src-k="pos">POS</button>
+            <button type="button" role="tab" aria-selected="false" data-src-k="app">배달 앱</button>
+          </div>
+          <ol class="mt-5 space-y-4" data-howto></ol>
+        </section>
+
+        <div class="divider my-10"></div>
+
+        <section>
+          <h2 class="section-title">필요한 자료</h2>
+          <dl class="mt-5 space-y-4 text-[15px]">
+            <div class="flex gap-3"><span class="text-dim" data-icon="calendar"></span><dt class="w-24 flex-none font-semibold">변경 전 기간</dt>
+              <dd class="font-medium">11월 5일(목) ~ 11월 18일(수) <span class="text-sub">(14일)</span><span class="mt-1 block text-sm font-normal text-sub">변경 후와 같은 길이로 비교해요</span></dd></div>
+            <div class="flex gap-3"><span class="text-dim" data-icon="calendar-check"></span><dt class="w-24 flex-none font-semibold">변경 후 기간</dt>
+              <dd class="font-medium">11월 19일(목) ~ 12월 2일(수) <span class="text-sub">(14일)</span></dd></div>
+            <div class="flex gap-3"><span class="text-dim" data-icon="file-list"></span><dt class="w-24 flex-none font-semibold">필요한 항목</dt>
+              <dd class="font-medium">날짜 · 메뉴명 · 판매 수량 · 매출액</dd></div>
+            <div class="flex gap-3"><span class="text-dim" data-icon="attachment"></span><dt class="w-24 flex-none font-semibold">파일 형식</dt>
+              <dd class="font-medium">엑셀(XLSX·CSV) · PDF · 사진</dd></div>
+          </dl>
+        </section>
+
+        <div class="mt-12 flex items-center justify-between">
+          <a href="record.html?id=r1" class="btn btn-lg btn-ghost">나중에 하기</a>
+          <button type="button" class="btn btn-lg btn-primary" data-next disabled>다음</button>
+        </div>
+      </section>
+
+      <!-- STEP 2 -->
+      <section data-step="2" hidden>
+        <div class="mt-10 flex items-center justify-between">
+          <h2 class="section-title">업로드 목록</h2>
+          <label class="btn btn-sm btn-primary cursor-pointer"><span data-icon="add" data-size="16"></span>파일 추가<input type="file" class="sr-only" multiple accept=".xlsx,.xls,.csv,.pdf,image/*" data-input></label>
+        </div>
+        <ul class="mt-4 divide-y divide-line-light rounded-card border border-line-light px-5" data-files></ul>
+
+        <h2 class="section-title mt-12">파일 확인 결과</h2>
+        <div class="mt-4 flex gap-3 rounded-2xl bg-[#fff1f2] p-5" data-warn hidden>
+          <span class="text-error" data-icon="error-warning"></span>
+          <div><p class="text-[15px] font-semibold text-error">변경 전 1주 자료가 부족해요</p>
+            <p class="mt-1 text-sm font-medium text-error/90">11월 5일 ~ 11월 11일 판매 자료를 추가하면 같은 길이로 비교할 수 있어요.</p></div>
+        </div>
+        <ul class="mt-4 divide-y divide-line-light" data-checks></ul>
+
+        <div class="mt-12 flex items-center justify-between">
+          <button type="button" class="btn btn-lg btn-ghost" data-prev>이전</button>
+          <button type="button" class="btn btn-xl btn-primary" data-show>결과 보기</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, $$, icon, esc, toast, openModal } = App;
+    const files = [];
+    const kind = f => /\.(xlsx|xls|csv)$/i.test(f.name) ? 'excel' : /\.pdf$/i.test(f.name) ? 'pdf' : 'image';
+    const kindLabel = { excel: '엑셀', pdf: 'PDF', image: '사진' };
+    const howto = {
+      pos: ['POS 관리자 화면에서 매출 → 메뉴별 매출로 이동해요. (기기마다 메뉴 이름이 다를 수 있어요)', '기간을 11월 5일 ~ 12월 2일로 설정해요.', '엑셀로 내려받아 위에 올려 주세요. 사진으로 찍어 올려도 돼요.'],
+      app: ['배달 앱 사장님 사이트에서 정산 → 주문 내역으로 이동해요.', '기간을 11월 5일 ~ 12월 2일로 설정해요.', '엑셀로 내려받거나 화면을 캡처해 위에 올려 주세요.'],
+    };
+    const renderHow = k => ($('[data-howto]').innerHTML = howto[k].map((t, n) => `<li class="flex gap-3"><span class="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-brand-weak text-[13px] font-bold text-brand">${n + 1}</span><span class="text-[15px] font-medium leading-6">${esc(t)}</span></li>`).join(''));
+    $('[data-src]').addEventListener('click', e => {
+      const b = e.target.closest('[data-src-k]'); if (!b) return;
+      $$('[data-src-k]').forEach(x => x.setAttribute('aria-selected', String(x === b))); renderHow(b.dataset.srcK);
+    });
+    renderHow('pos');
+
+    function go(n) {
+      $$('[data-step]').forEach(s => (s.hidden = s.dataset.step !== String(n)));
+      $$('[data-stepn]').forEach(d => { const k = +d.dataset.stepn; d.classList.toggle('is-done', k < n); d.classList.toggle('is-current', k === n); $('.num', d).innerHTML = k < n ? icon('check', 14) : k; });
+      if (n === 2) renderCheck();
+      scrollTo(0, 0);
+    }
+    function add(list) { files.push(...list); $('[data-next]').disabled = !files.length; if (!$('[data-step="2"]').hidden) renderCheck(); toast(`파일 ${list.length}개를 올렸어요.`); }
+    $$('[data-input]').forEach(inp => inp.addEventListener('change', e => { add([...e.target.files]); e.target.value = ''; }));
+    const drop = $('[data-drop]');
+    ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('border-brand', 'bg-brand-weak'); }));
+    ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('border-brand', 'bg-brand-weak'); }));
+    drop.addEventListener('drop', e => add([...e.dataTransfer.files]));
+    $('[data-next]').addEventListener('click', () => go(2));
+    $('[data-prev]').addEventListener('click', () => go(1));
+
+    // 샘플 양식: 실제 CSV 파일로 내려받기
+    $('[data-sample]').addEventListener('click', () => {
+      const csv = '﻿날짜,메뉴명,판매 수량,매출액\n2026-11-05,떡볶이 세트,3,27000\n2026-11-05,김밥,12,42000\n';
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'trylog_판매자료_샘플.csv'; a.click();
+      toast('샘플 양식을 내려받았어요.');
+    });
+
+    let complete = false;
+    function renderCheck() {
+      $('[data-files]').innerHTML = files.map((f, i) => `<li class="flex items-center gap-3 py-3.5">
+        <span class="text-sub">${icon(kind(f) === 'image' ? 'image' : kind(f) === 'excel' ? 'file-excel' : 'file-text', 20)}</span>
+        <span class="flex-1 truncate text-sm text-body">${esc(f.name)} <span class="text-sub">· ${kindLabel[kind(f)]}</span></span>
+        <span class="text-[13px] font-medium text-brand">업로드 완료</span>
+        <button type="button" class="icon-btn h-7 w-7 text-sub" aria-label="${esc(f.name)} 삭제" data-rm="${i}">${icon('close', 16)}</button></li>`).join('')
+        || '<li class="py-6 text-center text-sm text-sub">올린 파일이 없어요.</li>';
+      // 목업 규칙: 파일 2개 이상이면 기간이 모두 채워진 것으로 봄
+      complete = files.length >= 2;
+      $('[data-warn]').hidden = complete || !files.length;
+      const ok = (good, label, text) => `<li class="flex items-start gap-3 py-4"><span class="${good ? 'text-brand' : 'text-error'}">${icon(good ? 'checkbox-circle' : 'error-warning', 20)}</span>
+        <span class="w-24 flex-none text-[15px] font-semibold ${good ? '' : 'text-error'}">${label}</span><span class="text-[15px] font-medium ${good ? 'text-body' : 'text-error'}">${text}</span></li>`;
+      const types = [...new Set(files.map(f => kindLabel[kind(f)]))].join(' · ') || '—';
+      $('[data-checks]').innerHTML = files.length ? [
+        ok(true, '파일 형식', `${types} 자료`),
+        ok(true, '변경 후 기간', '11월 19일 ~ 12월 2일 자료가 있어요'),
+        ok(complete, '변경 전 기간', complete ? '11월 5일 ~ 11월 18일 자료가 있어요' : '11월 5일 ~ 11월 11일 자료가 없어요'),
+        ok(true, '비교 항목', '메뉴명 · 판매 수량 · 매출액 데이터가 있어요'),
+      ].join('') : '';
+      $('[data-show]').disabled = !files.length;
+    }
+    $('[data-files]').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { files.splice(+b.dataset.rm, 1); renderCheck(); $('[data-next]').disabled = !files.length; } });
+    $('[data-show]').addEventListener('click', () => {
+      const next = files.some(f => kind(f) === 'image') ? 'confirm.html' : 'result.html';
+      if (complete) return (location.href = next);
+      openModal({ title: '이대로 결과를 볼까요?', body: '변경 전 1주 자료가 없어서 변경 전 1주와 변경 후 2주를 비교해요. 자료를 추가하면 더 정확해져요.', confirm: '이대로 보기', cancel: '자료 추가하기',
+        onConfirm: () => (location.href = next) });
+    });
+    App.hydrateIcons();
+    go(1);
+  </script>
+</body>
+</html>

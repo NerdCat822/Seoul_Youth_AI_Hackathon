@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>기록 수정 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="records">
+  <header data-topbar></header>
+
+  <main class="page">
+    <form class="container-main" novalidate data-form>
+      <h1 class="page-title">기록 수정</h1>
+
+      <div class="mt-8 rounded-[32px] border border-line-light bg-white p-8">
+        <div><label class="label text-sm text-sub" for="f-title">기록명</label>
+          <input class="input" id="f-title" required></div>
+
+        <div class="mt-6"><label class="label text-sm text-sub" for="f-change">변경 내용</label>
+          <textarea class="textarea h-44 resize-none" id="f-change" maxlength="500"></textarea>
+          <p class="mt-1 text-right text-[13px] text-sub"><span data-count>0</span>/500</p></div>
+
+        <div class="mt-4 grid grid-cols-2 gap-4">
+          <div><label class="label text-sm text-sub" for="f-start">시작일</label><input class="input" type="date" id="f-start" value="2026-11-19"></div>
+          <div><label class="label text-sm text-sub" for="f-end">종료일</label><input class="input" type="date" id="f-end" value="2026-12-02"></div>
+        </div>
+        <div class="mt-6"><label class="label text-sm text-sub" for="f-result">결과 확인일</label>
+          <input class="input" type="date" id="f-result" value="2026-12-03">
+          <p class="field-help">기본값은 종료일 다음 날이에요.</p>
+          <p class="field-error" data-date-error hidden></p></div>
+
+        <fieldset class="mt-8"><legend class="label text-sm">비교 항목</legend>
+          <div class="flex flex-wrap gap-2" data-chip-group="multi" data-compare>
+            <button type="button" class="chip" aria-pressed="true">세트 메뉴 주문 건수</button>
+            <button type="button" class="chip" aria-pressed="true">매출액</button>
+            <button type="button" class="chip" aria-pressed="false">전체 주문 건수</button>
+            <button type="button" class="chip" aria-pressed="false" data-custom>직접 입력</button>
+          </div>
+          <input class="input input-sm mt-3 max-w-[379px]" placeholder="비교할 항목을 입력해 주세요" data-custom-input hidden></fieldset>
+
+        <fieldset class="mt-8"><legend class="label text-sm">첨부 자료 <span class="font-normal text-sub">(선택)</span></legend>
+          <div class="flex flex-wrap items-center gap-2" data-files>
+            <span class="chip gap-1.5 hover:bg-white" data-file>메뉴판_변경후.jpg<button type="button" class="text-sub hover:text-heading" aria-label="메뉴판_변경후.jpg 삭제" data-remove></button></span>
+            <label class="btn btn-sm btn-neutral cursor-pointer"><span data-icon="add" data-size="16"></span>파일 추가<input type="file" class="sr-only" multiple data-add-file></label>
+          </div></fieldset>
+
+        <div class="mt-10 flex justify-end gap-2">
+          <a class="btn btn-lg btn-neutral" data-cancel>취소</a>
+          <button class="btn btn-lg btn-primary" type="submit">저장</button>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, $$, icon, esc, params } = App;
+    const r = TRYLOG.records.find(x => x.id === params.get('id')) || TRYLOG.records[0];
+    $('#f-title').value = r.title;
+    $('#f-change').value = `${r.change[0]} → ${r.change[1]}`;
+    $('[data-cancel]').href = `record.html?id=${r.id}`;
+    const count = () => ($('[data-count]').textContent = $('#f-change').value.length);
+    $('#f-change').addEventListener('input', count); count();
+    App.hydrateIcons();
+    const xIcon = () => $$('[data-remove]').forEach(b => { if (!b.innerHTML) b.innerHTML = icon('close', 16); });
+    xIcon();
+
+    // 종료일을 바꾸면 결과 확인일을 다음 날로 맞춤
+    $('#f-end').addEventListener('change', e => {
+      const d = new Date(e.target.value); if (isNaN(d)) return;
+      d.setDate(d.getDate() + 1); $('#f-result').value = d.toISOString().slice(0, 10);
+    });
+    $('[data-compare]').addEventListener('chipchange', () => ($('[data-custom-input]').hidden = $('[data-custom]').getAttribute('aria-pressed') !== 'true'));
+    $('[data-files]').addEventListener('click', e => { const b = e.target.closest('[data-remove]'); if (b) b.closest('[data-file]').remove(); });
+    $('[data-add-file]').addEventListener('change', e => {
+      [...e.target.files].forEach(f => e.target.closest('label').insertAdjacentHTML('beforebegin',
+        `<span class="chip gap-1.5 hover:bg-white" data-file>${esc(f.name)}<button type="button" class="text-sub hover:text-heading" aria-label="${esc(f.name)} 삭제" data-remove></button></span>`));
+      xIcon(); e.target.value = '';
+    });
+    $('[data-form]').addEventListener('submit', e => {
+      e.preventDefault();
+      const s = $('#f-start').value, en = $('#f-end').value, rs = $('#f-result').value, err = $('[data-date-error]');
+      const title = $('#f-title'); title.setAttribute('aria-invalid', String(!title.value.trim()));
+      let msg = !title.value.trim() ? '기록명을 입력해 주세요.' : en < s ? '종료일은 시작일보다 빠를 수 없어요.' : rs <= en ? '결과 확인일은 종료일 다음 날부터 고를 수 있어요.' : '';
+      err.textContent = msg; err.hidden = !msg;
+      if (msg) return;
+      location.href = `record.html?id=${r.id}&toast=${encodeURIComponent('기록을 저장했어요.')}`;
+    });
+  </script>
+</body>
+</html>

@@ -60,7 +60,7 @@ class AuthControllerTest {
 
     @Test
     void successfulLoginRotatesSessionAndTokenAndLogoutInvalidatesTheStoreSession() throws Exception {
-        when(accounts.authenticate("owner", "demo-pass")).thenReturn(new StorePrincipal(2, "두 번째 가게"));
+        when(accounts.authenticate("owner", "demo-pass")).thenReturn(new StorePrincipal(2, "두 번째 가게", "owner"));
         var anonymous = mvc.perform(get(PATH + "/session")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.authenticated").value(false)).andReturn();
         MockHttpSession session = (MockHttpSession) anonymous.getRequest().getSession();
@@ -71,7 +71,8 @@ class AuthControllerTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.storeId").value(2)).andReturn();
         assertThat(session.getId()).isNotEqualTo(initialId);
         assertThat(token(success)).isNotEqualTo(token(anonymous));
-        mvc.perform(get(PATH + "/session").session(session)).andExpect(jsonPath("$.storeId").value(2));
+        mvc.perform(get(PATH + "/session").session(session)).andExpect(jsonPath("$.storeId").value(2))
+                .andExpect(jsonPath("$.loginId").value("owner"));
         mvc.perform(post(PATH + "/logout").session(session).header(HEADER, token(anonymous)))
                 .andExpect(status().isForbidden());
         var logout = mvc.perform(post(PATH + "/logout").session(session).header(HEADER, token(success)))
@@ -110,10 +111,11 @@ class AuthControllerTest {
     }
 
     @Test
-    void signupAcceptsAnAddressDetail() throws Exception {
+    void signupAcceptsAnAddressDetailAndIgnoresOlderClientsPostcode() throws Exception {
         when(accounts.signup(argThat(form -> "1층".equals(form.addressDetail()))))
-                .thenReturn(new StorePrincipal(17, "성수 분식"));
-        signup(signupForm("1층")).andExpect(status().isCreated()).andExpect(jsonPath("$.storeId").value(17));
+                .thenReturn(new StorePrincipal(1, "성수 분식", "test_owner"));
+        signup(signupForm("1층").put("postalCode", "04782")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.storeId").value(1)).andExpect(jsonPath("$.loginId").value("test_owner"));
     }
 
     @Test
@@ -122,14 +124,20 @@ class AuthControllerTest {
         form.remove(List.of("openTime", "closeTime", "openedDate"));
         when(accounts.signup(argThat(input -> input.openTime() == null && input.closeTime() == null
                 && input.openedDate() == null && input.closedWeekdays() == null)))
-                .thenReturn(new StorePrincipal(18, "성수 분식"));
-        signup(form).andExpect(status().isCreated()).andExpect(jsonPath("$.storeId").value(18));
+                .thenReturn(new StorePrincipal(1, "성수 분식", "test_owner"));
+        signup(form).andExpect(status().isCreated()).andExpect(jsonPath("$.storeId").value(1));
+    }
+
+    @Test
+    void signupDoesNotAcceptAClientSelectedStoreId() throws Exception {
+        signup(signupForm("1층").put("storeId", 3)).andExpect(status().isBadRequest());
+        verify(accounts, never()).signup(any());
     }
 
     private ObjectNode signupForm(String detail) {
         ObjectNode form = json.createObjectNode()
                 .put("loginId", "test_owner").put("password", "test-password").put("storeName", "성수 분식")
-                .put("postalCode", "04782").put("address", "서울특별시 성동구 성수일로 1")
+                .put("address", "서울특별시 성동구 성수일로 1")
                 .put("megaCd", "11").put("megaNm", "서울특별시").put("ctyCd", "11200").put("ctyNm", "성동구")
                 .put("upjong", "Q0001").put("openTime", "10:00").put("closeTime", "20:00").put("openedDate", "2026-01-01");
         if (detail != null) form.put("addressDetail", detail);

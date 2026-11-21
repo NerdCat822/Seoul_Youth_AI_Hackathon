@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>기록 상세 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="records">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="container-main">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-3"><h1 class="page-title" data-title></h1><span data-badge></span></div>
+          <p class="mt-1.5 text-sm text-sub" data-started></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a class="btn btn-lg btn-neutral" data-edit-link>수정</a>
+          <div class="relative">
+            <button type="button" class="icon-btn border border-line" data-pop="more" aria-haspopup="true" aria-expanded="false" aria-label="더 보기"><span data-icon="more" data-size="20"></span></button>
+            <div class="popover right-0 top-11 w-44 p-1.5" data-popover="more" hidden>
+              <button type="button" class="menu-item" data-stop>기록 중단하기</button>
+              <button type="button" class="menu-item text-danger" data-delete>기록 삭제</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="mt-8 flex items-center justify-between gap-6 rounded-card border-2 p-8 shadow-panel" data-hero></section>
+
+      <div class="mt-12 flex items-start gap-10">
+        <section class="card min-w-0 flex-1 px-5 py-3" aria-label="기록 내용"><dl class="divide-y divide-line-light" data-kv></dl></section>
+        <section class="card w-[340px] flex-none p-5">
+          <h2 class="text-base font-semibold">진행 상황</h2>
+          <ol class="mt-5" data-timeline></ol>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, $$, icon, esc, params, badge, openModal, toast } = App;
+    const D = TRYLOG;
+    const r = D.records.find(x => x.id === params.get('id')) || D.records[0];
+    document.title = `${r.title} · trylog`;
+    $('[data-title]').textContent = r.title;
+    $('[data-badge]').innerHTML = badge(r.status);
+    $('[data-started]').textContent = `${r.start} 기록 시작`;
+    $('[data-edit-link]').href = `record-edit.html?id=${r.id}`;
+
+    const hero = {
+      check: ['결과를 확인할 수 있어요', '오늘이 결과 확인일이에요. 변경 전후 메뉴별 판매 자료를 준비해 결과를 확인해 보세요.', true],
+      progress: [`결과 확인일까지 ${String(r.resultNote).replace('D-', '')}일 남았어요`, `${r.end}까지 지금처럼 운영해 주세요. ${r.result}에 결과를 확인할 수 있어요.`, false],
+      planned: [`${r.start}에 시작해요`, '시작일 전에 바꾸기 전 판매 자료를 미리 올려 두면 결과를 더 정확하게 볼 수 있어요.', false],
+      done: ['결과 확인을 마쳤어요', '시도 결과와 다음에 해볼 일을 확인해 보세요.', true],
+      stopped: ['중단한 기록이에요', '중단한 기록은 결과를 비교하지 않아요. 다시 시작하려면 새 기록을 만들어 주세요.', false],
+      data: ['판매 자료를 확인해 주세요', '올린 자료에서 확인이 필요한 숫자가 있어요.', true],
+    }[r.status];
+    const hot = hero[2];
+    $('[data-hero]').classList.add(...(hot ? ['border-brand/60', 'bg-gradient-to-br', 'from-[#fffff4]', 'via-[#edfbe2]', 'to-[#e6fbfa]'] : ['border-line-light', 'bg-white']));
+    $('[data-hero]').innerHTML = `<div><h2 class="section-title-lg">${hero[0]}</h2><p class="mt-2 text-sm text-body">${esc(hero[1])}</p></div>
+      ${r.status === 'check' ? `<div class="flex flex-none gap-2"><button type="button" class="btn btn-lg btn-neutral" data-change-date>결과 확인일 변경</button>
+        <a href="upload.html" class="btn btn-lg btn-primary">결과 확인하기 ${icon('chevron-right', 18)}</a></div>`
+      : r.status === 'done' ? `<a href="result.html" class="btn btn-lg btn-primary flex-none">결과 보기 ${icon('chevron-right', 18)}</a>`
+      : r.status === 'progress' || r.status === 'planned' ? `<button type="button" class="btn btn-lg btn-neutral flex-none" data-change-date>결과 확인일 변경</button>` : ''}`;
+
+    const rows = [
+      ['pencil', '변경 내용', `${esc(r.change[0])} <span class="text-dim">→</span> <b class="font-semibold text-brand">${esc(r.change[1])}</b>`],
+      ['calendar', '진행 기간', `${r.startFull || r.start} ~ ${r.endFull || r.end}`, r.id === 'r1' ? '"오늘부터 2주"를 실제 날짜로 바꿨어요' : ''],
+      ['calendar-check', '결과 확인일', `<span data-result-date>${r.resultFull || r.result}</span>`],
+      ['file-list', '비교 항목', esc(r.compare)],
+      ['inbox', '필요한 자료', esc(r.needs), '결과 확인일에 올려 주시면 돼요'],
+      ['lightbulb', '연결된 사례', '없음'],
+    ];
+    $('[data-kv]').innerHTML = rows.map(([ic, k, v, note]) => `<div class="flex gap-3 py-4"><span class="mt-0.5 text-dim">${icon(ic, 18)}</span>
+      <dt class="w-[88px] flex-none text-[15px] font-semibold">${k}</dt><dd class="text-[15px] font-medium">${v}${note ? `<span class="mt-1 block text-sm font-normal text-sub">${note}</span>` : ''}</dd></div>`).join('');
+
+    const step = { planned: 0, progress: 1, check: 2, data: 2, done: 3, stopped: 1 }[r.status];
+    const tl = [['기록 시작', r.start], ['가게에서 운영', `${r.start} ~ ${r.end}`], ['결과 확인', r.status === 'check' ? `${r.result} · 지금` : r.result], ['다음에 해볼 일', '결과 확인 후']];
+    $('[data-timeline]').innerHTML = tl.map(([t, s], n) => {
+      const done = n < step, cur = n === step;
+      return `<li class="relative flex gap-3 pb-6 last:pb-0">
+        ${n < tl.length - 1 ? `<span class="absolute left-[7px] top-5 h-[calc(100%-12px)] w-px ${done ? 'bg-brand/40' : 'bg-line'}"></span>` : ''}
+        <span class="relative mt-1 flex h-[15px] w-[15px] flex-none items-center justify-center rounded-full ${done ? 'bg-brand text-white' : cur ? 'border-2 border-brand bg-white' : 'border-2 border-line bg-white'}">${done ? icon('check', 11) : ''}</span>
+        <div><p class="text-[15px] ${cur ? 'font-semibold text-brand-strong' : done ? 'font-medium' : 'font-medium text-muted'}">${t}</p>
+        <p class="mt-0.5 text-[13px] font-medium ${cur ? 'text-brand' : done ? 'text-sub' : 'text-muted'}">${s}</p></div></li>`; }).join('');
+
+    document.addEventListener('click', e => {
+      if (e.target.closest('[data-change-date]')) openModal({
+        title: '결과 확인일 변경', confirm: '변경하기',
+        body: `<p>바뀐 날짜에 결과 확인 알림을 보내드려요.</p><input type="date" class="input mt-4 text-heading" value="2026-12-03" min="2026-12-03" id="new-date">`,
+        onConfirm: m => {
+          const v = m.querySelector('#new-date').value; if (!v) return;
+          const [y, mo, d] = v.split('-').map(Number);
+          $('[data-result-date]').textContent = `${mo}월 ${d}일(${'일월화수목금토'[new Date(y, mo - 1, d).getDay()]})`;
+          toast('결과 확인일을 바꿨어요.');
+        }
+      });
+      if (e.target.closest('[data-stop]')) openModal({ title: '기록을 중단할까요?', body: '중단하면 결과를 비교하지 않아요. 기록 내용은 그대로 남아 있어요.', confirm: '중단하기',
+        onConfirm: () => (location.href = 'records.html?toast=기록을 중단했어요.') });
+      if (e.target.closest('[data-delete]')) openModal({ title: '기록을 삭제할까요?', body: '삭제한 기록과 연결된 결과는 되돌릴 수 없어요.', confirm: '삭제하기', tone: 'danger',
+        onConfirm: () => (location.href = 'records.html?toast=기록을 삭제했어요.') });
+    });
+    App.hydrateIcons();
+  </script>
+</body>
+</html>

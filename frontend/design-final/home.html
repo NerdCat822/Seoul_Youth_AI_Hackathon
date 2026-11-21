@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 가게 홈 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="home">
+  <header data-topbar></header>
+
+  <div class="flex justify-center gap-20 px-14 pb-16 pt-8">
+    <main class="w-full max-w-container min-w-0">
+      <!-- 인사 -->
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="page-title"><span class="text-brand">행복분식</span> 사장님, 안녕하세요</h1>
+          <p class="mt-1 text-base text-sub" data-greet></p>
+        </div>
+        <a href="ai.html?start=record" class="btn btn-xl btn-primary">새 기록 작성하기</a>
+      </div>
+
+      <!-- 기록 요약 -->
+      <section class="card mt-8 grid grid-cols-4 p-8" aria-label="기록 요약" data-summary></section>
+
+      <!-- 다음 7일 예상매출 -->
+      <section class="card mt-14 p-5">
+        <div class="flex items-start justify-between">
+          <div><h2 class="text-base font-semibold">다음 7일 예상매출</h2>
+            <p class="mt-1 text-[13px] text-sub">12월 4일(목) ~ 12월 10일(수)</p></div>
+          <a href="forecast.html" class="btn btn-sm btn-neutral">자세히 보기 <span data-icon="chevron-right" data-size="16"></span></a>
+        </div>
+        <div class="mt-4 flex items-end justify-between">
+          <div><p class="text-[30px] font-extrabold leading-9" data-fc-total></p>
+            <p class="mt-4 text-[13px] text-sub">12월 3일 판매자료 기준</p></div>
+          <div class="w-[450px]" data-fc-bars></div>
+        </div>
+      </section>
+
+      <!-- 진행 중인 기록 + 달력 -->
+      <div class="mt-14 flex items-start gap-10">
+        <section class="min-w-0 flex-1">
+          <div class="flex items-center justify-between"><h2 class="section-title">진행 중인 기록</h2>
+            <a href="records.html" class="btn btn-sm btn-neutral">모든 기록 보기 <span data-icon="chevron-right" data-size="16"></span></a></div>
+          <div class="mt-5 space-y-6" data-active-records></div>
+        </section>
+        <section class="panel w-[380px] flex-none p-6" aria-label="이번 달 달력">
+          <div class="flex items-center justify-between"><h2 class="text-[18px] font-bold">2026년 12월</h2>
+            <a href="calendar.html" class="more-link">달력 보기 <span data-icon="chevron-right" data-size="16"></span></a></div>
+          <div class="mt-4 grid grid-cols-7 text-center text-[13px] text-sub"></div>
+          <div class="grid grid-cols-7 text-center" data-mini-cal></div>
+          <ul class="mt-4 space-y-1.5 text-sm text-body" data-mini-legend></ul>
+        </section>
+      </div>
+
+      <!-- 동네 사례 -->
+      <section class="mt-16">
+        <div class="flex items-center justify-between"><h2 class="section-title">동네 가게들은 뭘 해봤을까?</h2>
+          <a href="explore.html" class="btn btn-sm btn-neutral">모든 동네 사례 보기 <span data-icon="chevron-right" data-size="16"></span></a></div>
+        <div class="mt-5 grid grid-cols-3 gap-4" data-ideas></div>
+      </section>
+    </main>
+
+    <div class="flex-none transition-[width]" data-ai-host></div>
+  </div>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-chat.js"></script>
+  <script>
+    const { $, $$, icon, esc, won, badge, ideaCard } = App;
+    const D = TRYLOG;
+    const count = s => D.records.filter(r => r.status === s).length;
+
+    $('[data-greet]').textContent = `결과를 확인할 기록이 ${count('check')}건 있어요.`;
+    $('[data-summary]').innerHTML = [['진행 중', count('progress'), 'progress'], ['결과 확인 필요', count('check'), 'check'],
+      ['확인 완료', count('done'), 'done'], ['전체 기록', D.records.length, 'all']].map(([l, n, s], i) =>
+      `<a href="records.html?status=${s}" class="group block ${i ? 'border-l border-line-light pl-8' : ''}">
+        <p class="text-sm font-medium text-sub">${l}</p>
+        <p class="mt-2 text-2xl font-bold text-brand-strong group-hover:underline">${n}건</p></a>`).join('');
+
+    // 7일 예상매출 막대
+    const max = Math.max(...D.forecast.map(f => f.v));
+    $('[data-fc-total]').textContent = won(D.forecast.reduce((a, f) => a + f.v, 0)) + '원';
+    $('[data-fc-bars]').innerHTML = `<div class="flex h-[104px] items-end">${D.forecast.map(f =>
+      `<div class="bar-col px-[22px]" title="${f.d} ${won(f.v)}원"><div class="bar rounded-t-md bg-gradient-to-b from-[#22c58b] to-brand" style="height:${Math.round(f.v / max * 100)}%;opacity:${f.v === max ? 1 : .8}"></div></div>`).join('')}</div>
+      <div class="mt-3 flex">${D.forecast.map((f, i) => `<span class="flex-1 text-center text-[13px] font-medium text-sub">${i ? f.d.split('/')[1] + '일' : '12월 4일'}</span>`).join('')}</div>`;
+
+    // 진행 중인 기록 카드
+    const active = D.records.filter(r => ['check', 'progress'].includes(r.status));
+    $('[data-active-records]').innerHTML = active.map(r => {
+      const hot = r.status === 'check';
+      return `<a href="record.html?id=${r.id}" class="block rounded-card bg-white p-5 transition-shadow hover:shadow-panel ${hot ? 'border-2 border-brand/60 shadow-panel' : 'border border-line-light'}">
+        <div class="flex items-center justify-between"><h3 class="text-[18px] font-semibold">${esc(r.title)}</h3>${badge(r.status)}</div>
+        <dl class="mt-4 grid grid-cols-4 gap-4">
+          <div><dt class="text-[13px] text-sub">시작일</dt><dd class="mt-1 text-sm font-medium text-body">${r.start}</dd></div>
+          <div><dt class="text-[13px] text-sub">종료일</dt><dd class="mt-1 text-sm font-medium text-body">${r.end}</dd></div>
+          <div><dt class="text-[13px] text-sub">결과 확인일</dt><dd class="mt-1 text-sm font-medium text-body">${r.result}
+            <span class="ml-1 text-[13px] font-semibold text-brand">${hot ? '오늘' : r.resultNote.replace('D-', '') + '일 뒤'}</span></dd></div>
+          <div><dt class="text-[13px] text-sub">비교 항목</dt><dd class="mt-1 truncate text-sm font-medium text-body">${r.compare}</dd></div>
+        </dl>
+        <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-surface"><div class="h-full rounded-full bg-brand" style="width:${r.progress}%"></div></div>
+        ${hot ? `<p class="mt-4 flex items-center justify-between text-[15px] font-medium text-danger">${esc(r.warn)}
+          <span class="inline-flex items-center text-sm font-semibold text-brand-text">결과 확인하기 ${icon('chevron-right', 16)}</span></p>` : ''}
+      </a>`; }).join('');
+
+    // 미니 달력 (2026년 12월, 1일 = 화요일)
+    const colors = { r1: '#155dfc', r2: '#00b8db', r3: '#ad46ff', r4: '#f6339a' };
+    const spans = { r1: [-99, 2], r2: [-99, 7], r3: [-99, 13], r4: [8, 21] };
+    let cells = '<span></span><span></span>';
+    for (let d = 1; d <= 31; d++) {
+      const dots = Object.keys(spans).filter(k => d >= spans[k][0] && d <= spans[k][1]).map(k => `<i class="h-1 w-1 rounded-full" style="background:${colors[k]}"></i>`).join('');
+      const today = d === 3;
+      cells += `<a href="calendar.html" class="flex h-12 flex-col items-center justify-center gap-1 rounded-xl hover:bg-surface-2" aria-label="12월 ${d}일${today ? ' 오늘' : ''}">
+        <span class="flex h-7 w-7 items-center justify-center rounded-full text-sm ${today ? 'bg-info font-bold text-white' : 'text-body'}">${d}</span>
+        <span class="flex h-1 gap-0.5">${dots}</span></a>`;
+    }
+    $('[data-mini-cal]').innerHTML = cells;
+    $('[data-mini-cal]').previousElementSibling.innerHTML = [...'일월화수목금토'].map(d => `<span class="py-2">${d}</span>`).join('');
+    $('[data-mini-legend]').innerHTML = D.records.filter(r => spans[r.id]).map(r =>
+      `<li class="flex items-center gap-2"><i class="h-2 w-2 rounded-full" style="background:${colors[r.id]}"></i>${esc(r.title)} · ${r.start} ~ ${r.end}</li>`).join('');
+
+    $('[data-ideas]').innerHTML = ['i1', 'i2', 'i3'].map(id => ideaCard(D.ideas.find(i => i.id === id), { compact: true })).join('');
+    App.hydrateIcons();
+    mountAiPanel($('[data-ai-host]'));
+  </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>trylog 화면 목록</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header data-topbar="minimal"></header>
+  <main class="page">
+    <div class="container-main">
+      <h1 class="page-title">trylog 화면 목록</h1>
+      <p class="page-desc">Figma 01_design 페이지 기준 · 시연 기준일 2026년 12월 3일(목)</p>
+      <div class="mt-10 grid grid-cols-2 gap-6" data-list></div>
+    </div>
+  </main>
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const groups = [
+      ['온보딩', [['login.html', 'ON-02', '로그인'], ['signup.html', 'ON-03', '회원가입 (계정 정보 → 가게 정보 → 가입 완료)']]],
+      ['홈', [['home-guest.html', 'HM-01', '첫 방문 홈 (AI 대화 패널 포함)'], ['home.html', 'HM-02', '내 가게 홈 (알림 · 사용자 메뉴 · AI 대화 패널 · 대화 목록)']]],
+      ['AI 대화', [['ai.html', 'AI-01·02·00', '고민 상담 → 해볼 일 제안 → 시도해보기'], ['ai.html?start=record', 'AI-03·04·05', '변화 기록 → 기록 확인 → 저장 완료'], ['ai.html', 'AI-01-A', '입력창 + 버튼 → 판매 자료 첨부 메뉴']]],
+      ['탐색', [['explore.html', 'ID-01', '동네 가게들은 뭘 해봤을까? (분야 · 0원 필터)'], ['idea.html?id=i1', 'ID-02', '사례 상세']]],
+      ['내 기록', [['records.html', 'RC-01', '내 기록 목록 (상태 필터)'], ['calendar.html', 'RC-02', '월간 달력'], ['record.html?id=r1', 'RC-03', '기록 상세 — 확인 필요'], ['record-edit.html?id=r1', 'RC-04', '기록 수정']]],
+      ['결과 확인', [['upload.html', 'RC-05', '판매 자료 올리기 → 자료 확인 (자료 부족 상태 포함)'], ['confirm.html', 'RC-06', '판매 자료 숫자 확인 (사진)'], ['confirm.html?mode=manual', 'RC-06', '숫자로 직접 입력'], ['result.html', 'RC-07·08', '시도 결과 + 다음에 해볼 일']]],
+      ['예상매출', [['forecast.html', 'FC-02', '앞으로 7일 예상매출'], ['forecast.html?state=empty', 'FC-01', '판매 자료가 더 필요해요'], ['baseline.html', 'FC-03', '과거 매출 기준선 (예시)']]],
+      ['설정', [['store.html', 'ST-01', '내 가게 — 가게 정보'], ['store.html?tab=data', 'ST-02', '판매 자료 관리'], ['settings.html', 'SE-01·02', '계정 설정 · 개인정보 (로그아웃 · 회원 탈퇴 확인창)']]],
+    ];
+    App.$('[data-list]').innerHTML = groups.map(([g, items]) => `<section class="card p-6"><h2 class="section-title">${g}</h2>
+      <ul class="mt-3 divide-y divide-line-light">${items.map(([h, c, t]) => `<li><a href="${h}" class="flex items-center gap-3 py-3 hover:text-brand-text">
+        <span class="w-24 flex-none text-[13px] font-semibold text-sub">${c}</span><span class="text-[15px] font-medium">${t}</span></a></li>`).join('')}</ul></section>`).join('');
+  </script>
+</body>
+</html>

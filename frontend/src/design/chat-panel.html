@@ -1,0 +1,89 @@
+<aside
+  data-ai-panel
+  class="flex flex-col overflow-hidden rounded-panel border border-line-light bg-white shadow-panel"
+  aria-label="AI 대화"
+>
+  <div class="flex h-20 flex-none items-center justify-between px-6">
+    <button type="button" class="icon-btn" data-panel-list aria-label="대화 목록">
+      <span data-icon="menu" data-size="24"></span>
+    </button>
+    <h2 class="text-[18px] font-bold" data-panel-title>대화</h2>
+    <button type="button" class="btn btn-lg btn-neutral gap-1.5" data-panel-min>
+      작게보기 <span data-icon="collapse" data-size="16"></span>
+    </button>
+  </div>
+  <div class="relative min-h-0 flex-1">
+    <div class="absolute inset-0 overflow-y-auto px-6 pb-4" data-chat-scroll>
+      <div class="flex min-h-full flex-col">
+        <div class="m-auto flex flex-col items-center py-10 text-center" data-chat-empty>
+          <p class="text-[18px] font-bold">해본 일이나 고민을 바로 남길 수 있어요</p>
+          <p class="mt-2 text-base text-sub">
+            새로운 방법을 찾고, 기록하고, 달라진 결과를 확인해 보세요.
+          </p>
+          <button
+            type="button"
+            class="mt-14 flex h-20 w-20 items-center justify-center rounded-full border border-line bg-white shadow-panel hover:bg-surface-2"
+            data-mic
+            aria-label="음성으로 말하기"
+          >
+            <span data-icon="mic" data-size="32"></span>
+          </button>
+        </div>
+        <div class="space-y-6 pt-2" data-chat-log></div>
+      </div>
+    </div>
+    <div class="absolute inset-0 overflow-y-auto bg-white px-6" data-chat-list hidden>
+      <div class="relative">
+        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sub"
+          ><span data-icon="search" data-size="18"></span
+        ></span>
+        <input
+          class="input h-12 border-0 bg-surface pl-11"
+          placeholder="검색어를 입력해주세요"
+          data-list-search
+          aria-label="대화 검색"
+        />
+      </div>
+      <ul class="mt-6 space-y-1" data-list-items></ul>
+    </div>
+  </div>
+  <div class="flex-none px-6 pb-6">
+    <div class="mb-6 flex flex-wrap gap-2" data-hints>
+      <button type="button" class="hint-chip" data-hint="lunch">점심시간에 손님이 줄었어요</button>
+      <button type="button" class="hint-chip" data-hint="free">
+        비용 없이 고객을 늘리고 싶어요
+      </button>
+      <button type="button" class="hint-chip" data-hint="price">최근 메뉴 가격을 바꿨어요</button>
+    </div>
+    <form class="composer" data-chat-form>
+      <label class="sr-only" for="panel-input">AI에게 말하기</label>
+      <input
+        id="panel-input"
+        class="w-full border-0 bg-transparent p-0 text-base placeholder:text-muted focus:outline-none"
+        placeholder="이어서 이야기해 주세요."
+        data-chat-input
+        autocomplete="off"
+      />
+      <div class="mt-4 flex items-center justify-between">
+        <a href="upload.html" class="round-btn" aria-label="자료 첨부"
+          ><span data-icon="add" data-size="22"></span
+        ></a>
+        <span class="flex gap-2"
+          ><button type="button" class="round-btn" data-mic aria-label="음성 입력">
+            <span data-icon="mic" data-size="18"></span>
+          </button>
+          <button class="send-btn" aria-label="보내기">
+            <span data-icon="arrow-up" data-size="18"></span></button
+        ></span>
+      </div>
+    </form>
+  </div>
+</aside>
+<button
+  type="button"
+  class="fixed bottom-8 right-8 z-30 flex h-14 items-center gap-2 rounded-full bg-heading px-5 text-[15px] font-semibold text-white shadow-pop hover:bg-black"
+  data-ai-fab
+  hidden
+>
+  <span data-icon="sparkling" data-size="20"></span> AI 대화
+</button>

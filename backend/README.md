@@ -1,43 +1,34 @@
 # 트라이로그 실행 안내
 
-React에서 **가게 회원가입 → 주소 검색 → 가입 → 홈**으로 이동한다. 가입할 때 가게 번호가 자동 발급되며, 이후에는 직접 정한 아이디와 비밀번호로 로그인한다. 기존 시도가 있는 가게에서는 **내 기록 → 확인할 차례인 시도 → 전후 주문 비교하기 → DB 주문으로 비교**를 선택한다. 홈과 달력의 오늘은 서버의 서울 날짜다.
+React에서 **회원가입 → 업종 선택 → 주소 검색 → 가입 → 홈**으로 이동한다. 가입한 계정은 선택한 업종의 기존 가게에 연결된다. 기존 시도가 있는 가게에서는 **내 기록 → 확인할 차례인 시도 → 전후 주문 비교하기 → DB 주문으로 비교**를 선택한다. 홈과 달력의 오늘은 서버의 서울 날짜다.
 
 ## 가게 회원가입 준비
 
-가게와 로그인 정보는 `seoul_youth_ai_hackathon.stores` 한 행에 저장한다. DB 소유자는 배포 전에 아직 적용하지 않은 마이그레이션을 번호 순서대로 실행한다. 001과 002가 적용된 DB에는 [003 개업일·영업시간 선택 입력](ops/migrations/003-optional-store-hours.sql)만 적용한다. 이 변경으로 개업일, 영업 시작 시간, 영업 종료 시간을 각각 비워 둘 수 있다.
+이번 변경은 [004 가게 로그인 계정 분리 SQL](ops/migrations/004-store-login-accounts.sql) 한 파일에 들어 있다. 원본 서비스 DDL 또는 이전 회원가입 스키마(001~003)가 적용된 DB에서 실행할 수 있다. `seoul_youth_ai_hackathon.stores`에는 아래 업종에 해당하는 가게 1·2·3번이 미리 있어야 한다.
 
-DB 소유자로 대상 DB에 접속한 psql에서, 현재 디렉터리가 `backend/`일 때 다음 명령 중 미적용 파일만 실행한다.
+| 가입 업종 | 업종 코드 | 연결되는 `store_id` |
+| --- | --- | ---: |
+| 분식 | `Q0001` | 1 |
+| 버거-패스트푸드 | `Q0002` | 2 |
+| 피자 | `Q0003` | 3 |
 
-```text
-\i ops/migrations/001-store-accounts.sql
-\i ops/migrations/002-upjongs.sql
-\i ops/migrations/003-optional-store-hours.sql
-```
-
-업종 테이블 `seoul_youth_ai_hackathon.upjongs`에는 `upjong.csv`의 코드와 이름 8쌍이 파일 순서대로 들어간다. 가입에서 ‘카페’를 고르면 `stores.upjong`에 `Q0007`이 저장되고, 홈에는 ‘카페’가 표시된다. 서비스 DB 역할에는 새 테이블의 `SELECT` 권한이 필요하다. 역할을 별도로 운영한다면 `DB_USER`에 서비스 역할명을 설정한 환경에서 DB 소유자로 psql을 열고 다음과 같이 부여한다.
+DB 소유자로 대상 DB에 연결한 psql에서 `backend/`를 기준으로 실행한다. 앱이 별도 DB 역할을 쓴다면 실행할 세션의 `trylog.service_role`에 해당 역할명을 지정한다. 예를 들어 psql을 띄운 환경의 `DB_USER`가 **앱 역할**이면 아래 첫 두 줄로 전달할 수 있다.
 
 ```text
-\getenv service_role DB_USER
-GRANT SELECT ON seoul_youth_ai_hackathon.upjongs TO :"service_role";
+\getenv app_role DB_USER
+SET trylog.service_role = :'app_role';
+\i ops/migrations/004-store-login-accounts.sql
 ```
 
-두 번째 마이그레이션은 CSV와 일치하는 기존 가게의 업종명을 코드로 바꾼다. 목록에 없는 기존 값은 그대로 보존하고 새 가게에는 외래 키를 적용한다. 다음 쿼리로 개별 확인이 필요한 기존 값을 찾을 수 있다. 모두 매핑되면 `ALTER TABLE seoul_youth_ai_hackathon.stores VALIDATE CONSTRAINT stores_upjong_fk`로 기존 행까지 검증한다. 마이그레이션 시 이미 모두 매핑된 경우 이 검증도 자동으로 끝난다.
+서버는 `upjongs.store_id`에서 대표 가게 번호를 찾아 `store_accounts.store_id`에 저장한다. 여러 계정이 같은 가게의 메뉴·주문·시도·저장된 대화를 공유한다. 가입한 사람의 가게 이름과 주소, 영업 정보는 계정별로 저장한다. 로그인 아이디는 대소문자를 구분하지 않으며 비밀번호는 PBKDF2-HMAC-SHA256 해시로 저장한다.
 
-```sql
-SELECT s.upjong, count(*) AS store_count
-FROM seoul_youth_ai_hackathon.stores AS s
-LEFT JOIN seoul_youth_ai_hackathon.upjongs AS u ON u.upjong_cd = s.upjong
-WHERE u.upjong_cd IS NULL
-GROUP BY s.upjong;
-```
+004는 기존 로그인 아이디와 비밀번호 해시를 이관한 뒤 `stores.login_id`, `stores.password_hash`, `stores.postal_code`를 삭제한다. 기존 계정의 업종이 세 업종 중 하나라면 해당 대표 가게에 연결한다. 기존 주문과 시도는 원래 가게 번호에 남으므로, 예를 들어 이전 가게 10번 계정이 분식 가게 1번에 연결되면 로그인 후에는 1번의 자료가 보인다. 지원하지 않는 업종의 기존 계정이 있거나 대표 가게의 업종이 다르면 SQL이 전체 변경을 롤백한다. 오류에 나온 가게의 업종 배정을 확인한 다음 재실행한다.
 
-가입 아이디는 대소문자를 구분하지 않는다. `login_id`에는 소문자로 정규화한 아이디가, `password_hash`에는 임의의 솔트를 사용한 PBKDF2-HMAC-SHA256 해시가 들어간다. `postal_code`, `address`, `address_detail`과 기존 지역·영업 정보 컬럼에는 사용자가 선택하거나 입력한 값이 들어간다.
-
-가입을 제공할 환경에서는 `TRYLOG_ALLOW_WRITES=true`로 서버를 실행한다. 앱 역할에는 스키마 USAGE, 서비스 조회 SELECT, `stores` INSERT와 가게 번호 시퀀스 USAGE 권한이 필요하다. 시도 등록도 제공하려면 `experiments` INSERT 권한이 필요하다. 운영에서는 HTTPS로 접속하고 TLS를 종료하는 프록시 뒤에서는 세션 쿠키에 `Secure`가 적용되도록 `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`를 설정한다.
+가입을 제공할 환경에서는 `TRYLOG_ALLOW_WRITES=true`로 서버를 실행한다. 앱 역할에는 스키마 USAGE, 서비스 데이터 SELECT, `upjongs` SELECT, `store_accounts` SELECT·INSERT 권한이 필요하다. 시도 등록에는 `experiments` INSERT 권한도 필요하다. 운영에서는 HTTPS로 접속하고 TLS를 종료하는 프록시 뒤에서는 세션 쿠키에 `Secure`가 적용되도록 `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`를 설정한다.
 
 회원가입 필수 항목은 로그인 아이디, 비밀번호, 가게 이름, 업종, 가게 주소, 상세 주소다. 개업일, 영업 시작·종료 시간, 정기 휴무일은 선택 사항이다. 비워 둔 날짜와 시간은 `NULL`로 저장한다.
 
-**가게 주소**에 동 이름, 도로명 또는 지번을 두 글자 이상 입력하면 도로명주소와 지번주소가 짝으로 표시된다. 예를 들어 `영등포구 여의동`을 입력하면 행정동이 여의동인 건물의 도로명주소와 법정동인 여의도동의 지번을 함께 볼 수 있다. **주소 더 보기**로 다음 10건을 펼칠 수 있다. 주소를 클릭하거나 방향키와 Enter로 선택하면 우편번호와 시도·시군구 코드는 자동으로 가입 정보에 반영되고, 상세 주소로 이동한다.
+**가게 주소**에 동 이름, 도로명 또는 지번을 두 글자 이상 입력하면 도로명주소와 지번주소가 짝으로 표시된다. 예를 들어 `영등포구 여의동`을 입력하면 행정동이 여의동인 건물의 도로명주소와 법정동인 여의도동의 지번을 함께 볼 수 있다. **주소 더 보기**로 다음 10건을 펼칠 수 있다. 주소를 선택하면 시도·시군구 이름과 코드가 가입 정보에 반영되고 상세 주소로 이동한다.
 
 기본 검색은 키 없이 동작한다. 서버에 포함한 자료는 2026년 11월 9일 기준 서울 전역과 전주 여의동 일대의 도로명·지번 조합 525,312건이다. 자료를 갱신할 때는 우정사업본부에서 지역별 주소 DB ZIP을 받아 Python 3.11 이상으로 `python backend/ops/build-address-directory.py <ZIP경로>`를 실행한 뒤 서버를 다시 빌드한다. [우정사업본부 지역별 주소 DB](https://www.epost.go.kr/search/zipcode/areacdAddressDown.jsp)
 
@@ -101,10 +92,10 @@ npm run dev
 
 | 메서드 | 경로 | 동작 |
 | --- | --- | --- |
-| GET | `/auth/session` | 로그인 여부·현재 가게·가입 가능 여부·CSRF 토큰 |
+| GET | `/auth/session` | 로그인 여부·현재 로그인 아이디·연결된 가게 번호·계정의 가게 이름·가입 가능 여부·CSRF 토큰 |
 | GET | `/upjongs` | 로그인 전에도 조회 가능한 업종 목록. `upjongs` 배열에 `upjongCd`, `upjongNm`을 표시 순서대로 반환 |
 | GET | `/addresses/search?q=여의동` | 가입 화면의 주소 검색. `suggestions`에 도로명·지번·우편번호·시도/시군구 이름과 코드를 반환. `hasMore`가 참이면 다음 `page`(첫 페이지는 1)와 첫 응답의 `coverage`(`local` 또는 `national`)로 이어서 조회 |
-| POST | `/auth/signup` | `upjong`에 선택한 코드를 보내 가게를 등록하고 로그인. `openedDate`, `openTime`, `closeTime`, `closedWeekdays`는 각각 생략 가능. 미등록 업종은 400, 중복 ID는 409 |
+| POST | `/auth/signup` | 선택한 업종 코드(`upjong`)의 가게에 새 계정을 연결하고 로그인. `openedDate`, `openTime`, `closeTime`, `closedWeekdays`는 각각 생략 가능. 미등록 업종은 400, 중복 ID는 409 |
 | POST | `/auth/login`, `/auth/logout` | 세션 로그인 및 로그아웃 |
 | GET | `/health`, `/ready` | 프로세스 생존, DB 이름·스키마·서비스 열과 읽기 권한 검사. DB 준비 실패는 503 |
 | GET | `/overview`, `/menus` | 현재 가게의 정보(업종 코드 `upjongCd`·표시 이름 `upjongNm` 포함)와 쓰기 가능 여부, 메뉴 목록 |
@@ -138,11 +129,11 @@ API는 조회만 한다. `role`이 `SYSTEM`인 메시지는 모델 지시문이�
 
 오프라인 대체 모델 학습과 표본 회귀 실행법은 [매출 모델 안내](forecast-tools/README.md)에 있다.
 
-## 업종 선택 실행 검증
+## 계정 분리 전 업종 선택 검증 기록
 
 격리 PostgreSQL과 Chrome에서 CSV의 8개 코드·이름·순서를 API 및 가입 칩과 대조했다. ‘버거·패스트푸드’를 선택해 가입한 가게의 `stores.upjong`은 `Q0002`였고, 새로고침과 재로그인 후에도 홈에 ‘버거·패스트푸드’가 표시됐다. 빈 업종·미등록 코드·업종명을 직접 보낸 가입 요청은 모두 400을 반환했다. 기존 ‘분식’은 `Q0001`로 전환됐고, CSV에 없는 기존 업종명은 보존됐다. 공유 DB 반영은 배포 단계에 남아 있다.
 
-## 2026-11-21 회원가입 실행 검증
+## 2026-11-21 계정 분리 전 회원가입 검증 기록
 
 격리 PostgreSQL 16.4에서 기존 가게 번호를 보존한 채 마이그레이션을 적용했다. Chrome에서 카카오 지번 주소를 선택한 뒤 세종 도로명주소로 바꿔 가입했다. 발급된 `store_id`의 행에서 우편번호 `30145`, 시군구 코드 `36110`, 상세주소, 영업시간과 휴무일이 화면 입력과 일치했다. 새 가게의 빈 기록, 새로고침, 로그아웃, 대문자로 입력한 아이디의 재로그인을 확인했다.
 

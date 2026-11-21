@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 대화 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="home">
+  <header data-topbar></header>
+
+  <main class="mx-auto w-[840px] max-w-[calc(100vw-48px)] pb-56 pt-6" data-chat-root>
+    <div class="space-y-8 px-[23px]" data-chat-log></div>
+
+    <!-- 입력창 -->
+    <div class="fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-white via-white to-white/0 pb-8 pt-10">
+      <form class="composer relative mx-auto w-[840px] max-w-[calc(100vw-48px)]" data-chat-form>
+        <label class="sr-only" for="ai-input">AI에게 말하기</label>
+        <input id="ai-input" class="w-full border-0 bg-transparent p-0 text-base placeholder:text-muted focus:outline-none" placeholder="이어서 이야기해 주세요." autocomplete="off" data-chat-input>
+        <div class="mt-4 flex items-center justify-between">
+          <div class="relative">
+            <button type="button" class="round-btn" data-pop="attach" aria-haspopup="true" aria-expanded="false" aria-label="자료 첨부"><span data-icon="add" data-size="22"></span></button>
+            <!-- AI-01-A 첨부 메뉴 -->
+            <div class="popover bottom-12 left-0 w-[300px] p-2" data-popover="attach" hidden>
+              <p class="px-3 pb-1 pt-2 text-[13px] font-medium text-sub">판매 자료 첨부</p>
+              <a href="upload.html?type=photo" class="menu-item flex-col items-start gap-0.5 py-2.5"><span class="text-sm font-semibold">사진 올리기</span><span class="text-[13px] font-medium text-sub">POS 화면 · 영수증 사진</span></a>
+              <a href="upload.html?type=excel" class="menu-item flex-col items-start gap-0.5 py-2.5"><span class="text-sm font-semibold">엑셀 파일 올리기</span><span class="text-[13px] font-medium text-sub">.xlsx · .csv</span></a>
+              <a href="confirm.html?mode=manual" class="menu-item flex-col items-start gap-0.5 py-2.5"><span class="text-sm font-semibold">숫자로 직접 입력</span><span class="text-[13px] font-medium text-sub">날짜별 매출 · 주문 수</span></a>
+            </div>
+          </div>
+          <span class="flex gap-2">
+            <button type="button" class="round-btn" data-mic aria-label="음성 입력"><span data-icon="mic" data-size="18"></span></button>
+            <button class="send-btn" aria-label="보내기"><span data-icon="arrow-up" data-size="18"></span></button>
+          </span>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-chat.js"></script>
+  <script>
+    const { $, $$, icon, params, toast } = App;
+    App.hydrateIcons();
+    $('[data-mic]').addEventListener('click', () => toast('음성 입력은 준비 중이에요.'));
+    const chat = TrylogChat($('[data-chat-root]'));
+    const f = chat.flows;
+    const start = params.get('start'), idea = params.get('idea'), topic = params.get('topic');
+    chat.run(() => start === 'record' ? f.record() : start === 'next' ? f.next() : idea ? f.tryIdea(idea)
+      : topic === 'free' ? f.free('비용 없이 손님을 늘리고 싶어.') : topic === 'review' ? f.free('리뷰 답글을 어떻게 달면 좋을까?') : f.lunch());
+  </script>
+</body>
+</html>

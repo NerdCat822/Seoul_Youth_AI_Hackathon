@@ -33,10 +33,10 @@ class AccountService {
     @Transactional(readOnly = true)
     public StorePrincipal authenticate(String loginId, String password) {
         var account = db.query("""
-                SELECT store_id, store_name, password_hash FROM seoul_youth_ai_hackathon.stores
-                WHERE login_id = ? AND password_hash IS NOT NULL
-                """, (rs, row) -> new Account(new StorePrincipal(rs.getInt(1), rs.getString(2)), rs.getString(3)),
-                normalize(loginId)).stream().findFirst();
+                SELECT store_id, store_name, login_id, password_hash FROM seoul_youth_ai_hackathon.store_accounts
+                WHERE login_id = ?
+                """, (rs, row) -> new Account(new StorePrincipal(rs.getInt("store_id"), rs.getString("store_name"),
+                rs.getString("login_id")), rs.getString("password_hash")), normalize(loginId)).stream().findFirst();
         boolean matches = passwords.matches(password, account.map(Account::passwordHash).orElse(dummyHash));
         if (account.isEmpty() || !matches) throw new BadCredentialsException("아이디와 비밀번호를 확인해주세요.");
         return account.get().store();
@@ -44,9 +44,9 @@ class AccountService {
 
     public boolean signupEnabled() {
         return allowWrites && Boolean.TRUE.equals(db.queryForObject("""
-                SELECT has_table_privilege(current_user, 'seoul_youth_ai_hackathon.stores', 'INSERT')
-                   AND has_sequence_privilege(current_user,
-                       pg_get_serial_sequence('seoul_youth_ai_hackathon.stores', 'store_id'), 'USAGE')
+                SELECT has_table_privilege(current_user, 'seoul_youth_ai_hackathon.store_accounts', 'INSERT')
+                   AND has_table_privilege(current_user, 'seoul_youth_ai_hackathon.store_accounts', 'SELECT')
+                   AND has_table_privilege(current_user, 'seoul_youth_ai_hackathon.upjongs', 'SELECT')
                    AND NOT pg_is_in_recovery() AND NOT current_setting('default_transaction_read_only')::boolean
                 """, Boolean.class));
     }
@@ -61,22 +61,22 @@ class AccountService {
         String closed = days.stream().distinct().sorted().map(String::valueOf).collect(Collectors.joining(","));
         return db.query("""
                 WITH selected AS (
-                    SELECT upjong_cd FROM seoul_youth_ai_hackathon.upjongs WHERE upjong_cd = ?
+                    SELECT store_id FROM seoul_youth_ai_hackathon.upjongs WHERE upjong_cd = ?
                 ), registered AS (
-                    INSERT INTO seoul_youth_ai_hackathon.stores
-                        (login_id, password_hash, store_name, postal_code, address, address_detail, mega_cd, mega_nm,
-                         cty_cd, cty_nm, upjong, open_time, close_time, opened_date, closed_weekdays)
-                    SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, upjong_cd, ?, ?, ?, ? FROM selected
-                    ON CONFLICT (login_id) DO NOTHING RETURNING store_id, store_name
+                    INSERT INTO seoul_youth_ai_hackathon.store_accounts
+                        (store_id, login_id, password_hash, store_name, address, address_detail, mega_cd, mega_nm,
+                         cty_cd, cty_nm, open_time, close_time, opened_date, closed_weekdays)
+                    SELECT store_id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM selected
+                    ON CONFLICT (login_id) DO NOTHING RETURNING store_id, store_name, login_id
                 )
-                SELECT registered.store_id, registered.store_name FROM selected LEFT JOIN registered ON true
+                SELECT registered.store_id, registered.store_name, registered.login_id FROM selected LEFT JOIN registered ON true
                 """, rs -> {
                     if (!rs.next()) throw new InvalidInputException(Map.of("upjong", "목록에서 업종을 선택해주세요."));
                     Integer storeId = rs.getObject("store_id", Integer.class);
                     if (storeId == null) throw new DuplicateLoginException();
-                    return new StorePrincipal(storeId, rs.getString("store_name"));
+                    return new StorePrincipal(storeId, rs.getString("store_name"), rs.getString("login_id"));
                 }, form.upjong(), normalize(form.loginId()), passwords.encode(form.password()), form.storeName().strip(),
-                form.postalCode(), form.address().strip(), form.addressDetail().strip(),
+                form.address().strip(), form.addressDetail().strip(),
                 form.megaCd(), form.megaNm().strip(), form.ctyCd(), form.ctyNm().strip(),
                 form.openTime(), form.closeTime(), form.openedDate(), closed);
     }

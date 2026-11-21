@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>떡볶이 세트 가격 변경 결과 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="records">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="container-main flex items-start gap-10">
+      <div class="min-w-0 flex-1 space-y-6">
+        <!-- 헤더 -->
+        <header>
+          <div class="flex items-center gap-3"><h1 class="page-title">떡볶이 세트 가격 변경 결과</h1><span class="badge badge-done">완료</span></div>
+          <dl class="mt-4 flex flex-wrap items-center gap-3 text-base">
+            <div class="flex items-center gap-2"><dt class="text-[15px] text-sub">비교 기준 일자</dt><dd class="font-medium">11월 5일 ~ 11월 18일</dd></div>
+            <span class="h-4 w-px bg-divider" aria-hidden="true"></span>
+            <div class="flex items-center gap-2"><dt class="text-[15px] text-sub">진행기간</dt><dd class="font-medium">11월 19일 ~ 12월 2일</dd></div>
+            <span class="h-4 w-px bg-divider" aria-hidden="true"></span>
+            <div class="flex items-center gap-2"><dt class="text-[15px] text-sub">변경 내용</dt><dd class="font-medium">9,000원 <span class="text-[#a2a2a2]">→</span> <b class="font-semibold text-brand">8,000원</b></dd></div>
+          </dl>
+        </header>
+
+        <!-- 결과 요약 -->
+        <section class="grid grid-cols-3 gap-4" aria-label="결과 요약" data-stats></section>
+
+        <!-- AI 결과 요약 -->
+        <section class="rounded-card border-2 border-brand/60 bg-gradient-to-br from-[#fffff4] via-[#edfbe2] to-[#e6fbfa] p-5">
+          <h2 class="text-base font-semibold text-brand">AI 결과 요약</h2>
+          <p class="mt-2.5 text-base leading-6 text-body" data-summary></p>
+        </section>
+
+        <!-- 주별 차트 -->
+        <section class="card-strong p-5">
+          <div class="flex items-center gap-3 pb-6">
+            <h2 class="text-base font-semibold">주별 세트 메뉴 주문</h2><span class="flex-1"></span>
+            <span class="flex items-center gap-1 text-xs text-body"><i class="h-3 w-3 rounded-sm bg-brand"></i>세트 메뉴 주문(건)</span>
+          </div>
+          <div class="flex">
+            <div class="flex h-[284px] w-[60px] flex-col justify-between pr-3 text-[13px] text-sub" data-yaxis></div>
+            <div class="relative flex h-[284px] flex-1 items-end" data-bars></div>
+          </div>
+          <div class="flex pl-[60px]" data-xaxis></div>
+          <div class="mt-2 flex justify-end"><a href="baseline.html" class="more-link">일별 매출을 예상 기준선과 비교해 보기 <span data-icon="chevron-right" data-size="16"></span></a></div>
+        </section>
+
+        <!-- 비교 기준 -->
+        <section class="note">
+          <h2 class="text-base font-semibold">비교 기준 및 제한 사항</h2>
+          <ul class="mt-2.5 space-y-1 text-sm text-body">
+            <li>· 변경 전후 같은 길이(14일)를 비교했어요.</li>
+            <li>· 같은 기간 날씨 · 행사 · 다른 변경은 반영되지 않았어요.</li>
+            <li>· 이 결과로 변경과 매출 사이의 인과관계를 확정할 수 없어요.</li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- RC-08 다음에 해볼 일 -->
+      <aside class="sticky top-24 w-[384px] flex-none">
+        <form class="card p-5" data-next>
+          <fieldset>
+            <legend class="text-[18px] font-bold">다음에 해볼 일</legend>
+            <p class="mt-1 text-sm text-sub">결과를 보고 이 기록을 어떻게 할지 골라 주세요.</p>
+            <div class="mt-5 space-y-3" data-options></div>
+          </fieldset>
+          <div class="mt-6 flex justify-end"><button class="btn btn-lg btn-primary" data-next-btn></button></div>
+        </form>
+      </aside>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, $$, icon, esc, won, openModal } = App;
+    const R = TRYLOG.result, b = R.before, a = R.after;
+    const pct = (x, y) => x / y * 100;
+    const rb = pct(b.set, b.total), ra = pct(a.set, a.total);
+    const fmt = n => (Math.round(n * 100) / 100).toString();
+    const delta = (n, unit) => `<span class="text-sm font-medium ${n >= 0 ? 'text-up' : 'text-down'}">${n >= 0 ? '+' : '−'}${fmt(Math.abs(n))}${unit}</span>`;
+
+    $('[data-stats]').innerHTML = [
+      ['세트 메뉴 주문', a.set, '건', delta(a.set - b.set, '건'), `변경 전 ${b.set}건`],
+      ['전체 주문', a.total, '건', delta(a.total - b.total, '건'), `변경 전 ${b.total}건`],
+      ['전체 주문 중 세트 메뉴 비중', fmt(ra), '%', delta(ra - rb, '%p'), `변경 전 ${fmt(rb)}%`],
+    ].map(([t, v, u, d, before]) => `<div class="card-strong flex flex-col gap-3 p-5">
+        <p class="text-[15px] font-medium text-body">${t}</p>
+        <div class="flex items-end justify-between"><p class="flex items-end gap-0.5"><b class="text-2xl font-bold leading-7">${v}</b><span class="pb-0.5 text-sm font-medium">${u}</span></p>${d}</div>
+        <div class="divider"></div><p class="text-sm text-sub">${before}</p></div>`).join('');
+
+    $('[data-summary]').innerHTML = ra < rb
+      ? `세트 메뉴 주문은 ${a.set - b.set}건 늘었지만 전체 주문에서 차지하는 비중은 ${fmt(rb - ra)}%p 줄었어요.<br>전체 주문이 함께 늘어서 생긴 변화일 수 있어요. 메뉴 변경의 효과인지 판단하려면 추가 확인이 필요해요.`
+      : `세트 메뉴 주문과 비중이 모두 늘었어요.`;
+
+    const max = 35, steps = [35, 30, 25, 20, 15, 10, 5, 0];
+    $('[data-yaxis]').innerHTML = steps.map(s => `<span class="leading-none">${s}</span>`).join('');
+    $('[data-bars]').innerHTML = steps.slice(0, -1).map((s, i) => `<span class="pointer-events-none absolute inset-x-0 border-t border-dashed border-line-light" style="top:${i / 7 * 100}%"></span>`).join('')
+      + `<span class="absolute inset-x-0 bottom-0 border-t border-line"></span>`
+      + R.weekly.map((w, i) => `<div class="bar-col relative z-10" title="${w.label} ${w.v}건"><div class="bar" style="height:${w.v / max * 100}%"></div></div>`).join('');
+    $('[data-xaxis]').innerHTML = R.weekly.map(w => `<span class="flex-1 py-3 text-center text-[13px] font-medium text-sub">${w.label}</span>`).join('');
+
+    // 다음에 해볼 일: 고른 항목에 맞춰 버튼 문구와 이동 위치가 바뀜
+    const opts = [
+      ['keep', '현재 방식 유지', '8,000원을 계속 유지해요', '이대로 유지하기'],
+      ['more', '추가로 바꿔 보기', '이 기록을 참고해 다음 기록을 만들어요', '다음 기록 만들기'],
+      ['end', '종료', '이번 변화는 여기서 마무리해요', '기록 마치기'],
+      ['later', '나중에 결정', '결과는 그대로 저장돼요', '나중에 결정하기'],
+    ];
+    let sel = 'more';
+    function renderOpts() {
+      $('[data-options]').innerHTML = opts.map(([k, t, d]) => `<label class="flex cursor-pointer items-start gap-2 rounded-card bg-white p-5 transition-colors ${sel === k ? 'border-2 border-brand p-[19px]' : 'border border-line hover:bg-surface-2'}">
+        <span class="flex-1"><span class="block text-base font-semibold">${t}</span><span class="mt-0.5 block text-sm">${d}</span></span>
+        <input type="radio" name="next" value="${k}" class="peer sr-only" ${sel === k ? 'checked' : ''}>
+        <span class="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full ${sel === k ? 'bg-brand' : 'border border-[rgba(3,7,18,0.15)] bg-white'} peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40">${sel === k ? '<i class="h-2 w-2 rounded-full bg-white"></i>' : ''}</span></label>`).join('');
+      $('[data-next-btn]').textContent = opts.find(o => o[0] === sel)[3];
+    }
+    $('[data-options]').addEventListener('change', e => { sel = e.target.value; renderOpts(); $(`input[value="${sel}"]`).focus(); });
+    $('[data-next]').addEventListener('submit', e => {
+      e.preventDefault();
+      const to = (url, msg) => (location.href = `${url}?toast=${encodeURIComponent(msg)}`);
+      if (sel === 'more') location.href = 'ai.html?start=next';
+      if (sel === 'keep') to('records.html', '8,000원을 계속 유지하는 것으로 저장했어요.');
+      if (sel === 'later') to('home.html', '결과는 그대로 저장했어요. 나중에 다시 결정할 수 있어요.');
+      if (sel === 'end') openModal({ title: '이 기록을 마칠까요?', body: '결과와 기록 내용은 내 기록에 그대로 남아요.', confirm: '기록 마치기',
+        onConfirm: () => to('records.html', '기록을 마쳤어요.') });
+    });
+    renderOpts();
+    App.hydrateIcons();
+  </script>
+</body>
+</html>

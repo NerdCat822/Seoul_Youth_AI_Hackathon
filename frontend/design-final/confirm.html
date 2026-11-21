@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>숫자 확인 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="records">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="mx-auto w-[840px] max-w-full">
+      <h1 class="page-title" data-title>올린 자료의 숫자를 확인해 주세요</h1>
+      <p class="mt-3 text-sm text-heading" data-desc>사진에서 읽은 숫자가 맞는지 원본과 비교해 고쳐 주세요. 확인한 숫자만 결과에 반영돼요.</p>
+      <ol class="stepper mt-6" aria-label="결과 확인 단계">
+        <li class="step is-done"><span class="num" data-icon="check" data-size="14"></span>자료 올리기</li><li class="bar" aria-hidden="true"></li>
+        <li class="step is-current"><span class="num">2</span>자료 확인</li><li class="bar" aria-hidden="true"></li>
+        <li class="step"><span class="num">3</span>결과 보기</li>
+      </ol>
+
+      <div class="mt-10 grid grid-cols-[auto_1fr] gap-5" data-grid>
+        <!-- 원본 사진 -->
+        <section class="w-[440px] rounded-card border border-line bg-white p-5" data-photo-card>
+          <div class="flex items-center justify-between">
+            <p class="text-base font-semibold" data-photo-name></p>
+            <div class="flex items-center gap-1 text-sm font-semibold">
+              <span data-photo-page></span>
+              <button type="button" class="icon-btn h-7 w-7" data-zoom="-1" aria-label="축소">−</button>
+              <button type="button" class="icon-btn h-7 w-7" data-zoom="1" aria-label="확대">+</button>
+            </div>
+          </div>
+          <button type="button" class="mt-4 flex h-[264px] w-full items-center justify-center overflow-hidden rounded-xl bg-surface" data-photo aria-label="사진 크게 보기">
+            <div class="w-[260px] origin-center rounded-lg bg-white p-5 text-left text-sm shadow-panel transition-transform" data-receipt></div>
+          </button>
+          <p class="mt-3 text-sm font-semibold">사진을 누르면 크게 볼 수 있어요.</p>
+        </section>
+
+        <!-- 숫자 입력 -->
+        <form class="rounded-card border border-line bg-white p-5" novalidate data-form>
+          <div class="flex items-center justify-between">
+            <p class="text-[18px] font-bold" data-day-title></p>
+            <div class="flex items-center gap-1 text-sm font-semibold">
+              <button type="button" class="icon-btn h-7 w-7" data-day="-1" aria-label="이전 날"></button>
+              <span data-day-pos></span>
+              <button type="button" class="icon-btn h-7 w-7" data-day="1" aria-label="다음 날"></button>
+            </div>
+          </div>
+          <div class="mt-5 space-y-5" data-fields></div>
+          <div class="divider my-5"></div>
+          <p class="text-sm"><b class="font-semibold">세트 메뉴 주문 비중</b> <span class="ml-3 text-sub" data-ratio></span></p>
+          <p class="mt-3 text-sm font-semibold">주문 수는 0 이상의 정수예요. 메뉴 주문은 전체 주문보다 클 수 없어요.</p>
+        </form>
+      </div>
+
+      <div class="mt-10 flex items-center justify-between">
+        <a href="result.html" class="btn btn-lg btn-ghost">이미 있는 결과 보기</a>
+        <button type="button" class="btn btn-lg btn-primary" data-save disabled>이 숫자로 저장</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, $$, icon, esc, won, params, toast } = App;
+    const manual = params.get('mode') === 'manual';
+    // 사진에서 읽은 값(read)과 원본에 보이는 값(photo). 읽기 오류를 일부러 섞어 둔 목업.
+    const days = [
+      { label: '11월 19일 (목)', file: 'POS_1119.jpg', photo: { sales: 132000, total: 12, set: 4 }, read: { sales: 132000, total: 12, set: 4 } },
+      { label: '11월 20일 (금)', file: 'POS_1120.jpg', photo: { sales: 128000, total: 11, set: 4 }, read: { sales: 12800, total: 11, set: null } },
+      { label: '11월 21일 (토)', file: 'POS_1121.jpg', photo: { sales: 156000, total: 14, set: 5 }, read: { sales: 156000, total: 14, set: 5 } },
+    ];
+    let cur = 1, zoom = 1;
+    const values = days.map(d => ({ ...d.read }));
+
+    if (manual) {
+      $('[data-title]').textContent = '판매 숫자를 직접 입력해 주세요';
+      $('[data-desc]').textContent = '날짜별 매출과 주문 수를 입력하면 결과에 바로 반영돼요.';
+      $('[data-photo-card]').remove(); $('[data-grid]').classList.remove('grid-cols-[auto_1fr]');
+      values.forEach(v => { v.sales = null; v.total = null; v.set = null; });
+    }
+
+    $$('[data-day]').forEach(b => (b.innerHTML = icon(b.dataset.day === '-1' ? 'chevron-left' : 'chevron-right', 18)));
+    const field = (k, label, unit, v, err) => `<div><label class="text-sm font-semibold" for="f-${k}">${label}</label>
+      <div class="relative mt-2"><input class="input input-sm pr-10" id="f-${k}" inputmode="numeric" data-k="${k}" placeholder="숫자 입력" value="${v == null ? '' : won(v)}" aria-invalid="${!!err}">
+      <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">${unit}</span></div>${err ? `<p class="field-error">${err}</p>` : ''}</div>`;
+
+    function errors(i) {
+      const v = values[i], p = days[i].photo, e = {};
+      if (v.sales == null) e.sales = '매출을 입력해 주세요.';
+      else if (!manual && v.sales !== p.sales && Math.round(v.sales * 10) === p.sales) e.sales = `원본에는 ${won(p.sales)}원으로 보여요. 자리 수를 확인해 주세요. <button type="button" class="ml-1 underline" data-fix="${p.sales}">${won(p.sales)}원으로 고치기</button>`;
+      if (v.total == null) e.total = '전체 주문을 입력해 주세요.';
+      if (v.set == null) e.set = manual ? '세트 주문을 입력해 주세요.' : '사진에서 읽지 못했어요. 원본을 보고 직접 입력해 주세요.';
+      else if (v.total != null && v.set > v.total) e.set = '메뉴 주문은 전체 주문보다 클 수 없어요.';
+      return e;
+    }
+    function render(focusKey) {
+      const d = days[cur], v = values[cur], e = errors(cur);
+      $('[data-day-title]').textContent = d.label;
+      $('[data-day-pos]').textContent = `${days.length}일 중 ${cur + 1}번째`;
+      $('[data-fields]').innerHTML = field('sales', '전체 매출', '원', v.sales, e.sales) + field('total', '전체 주문', '건', v.total, e.total) + field('set', '떡순튀 세트 주문', '건', v.set, e.set);
+      $('[data-ratio]').textContent = v.set != null && v.total ? `${(v.set / v.total * 100).toFixed(1)}%` : '— (세트 주문을 입력하면 계산돼요)';
+      if (!manual) {
+        $('[data-photo-name]').textContent = d.file; $('[data-photo-page]').textContent = `${cur + 1} / ${days.length}`;
+        $('[data-receipt]').innerHTML = `<p class="font-semibold">행복분식 · 일별 매출</p><p class="mt-1 text-sub">2026-${d.label.slice(0, 2).replace('월', '')}-${d.label.match(/(\d+)일/)[1]}</p>
+          <div class="mt-3 space-y-1.5">${[['총 매출', won(d.photo.sales)], ['떡순튀 세트', d.photo.set], ['전체 주문', d.photo.total]].map(([k, n]) => `<p class="flex justify-between"><span>${k}</span><span>${n}</span></p>`).join('')}</div>`;
+        $('[data-receipt]').style.transform = `scale(${zoom})`;
+      }
+      $('[data-save]').disabled = values.some((_, i) => Object.keys(errors(i)).length);
+      if (focusKey) { const inp = $(`[data-k="${focusKey}"]`); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+    }
+    $('[data-fields]').addEventListener('input', e => {
+      const k = e.target.dataset.k; if (!k) return;
+      const digits = e.target.value.replace(/[^\d]/g, '');
+      values[cur][k] = digits === '' ? null : Number(digits);
+      render(k);
+    });
+    $('[data-fields]').addEventListener('click', e => { const f = e.target.closest('[data-fix]'); if (f) { values[cur].sales = +f.dataset.fix; render('sales'); } });
+    $$('[data-day]').forEach(b => b.addEventListener('click', () => { cur = (cur + +b.dataset.day + days.length) % days.length; render(); }));
+    $$('[data-zoom]').forEach(b => b.addEventListener('click', () => { zoom = Math.min(1.6, Math.max(0.8, zoom + 0.2 * b.dataset.zoom)); render(); }));
+    $('[data-photo]') && $('[data-photo]').addEventListener('click', () => { zoom = zoom > 1 ? 1 : 1.5; render(); });
+    $('[data-save]').addEventListener('click', () => (location.href = 'result.html?toast=' + encodeURIComponent('확인한 숫자로 결과를 계산했어요.')));
+    App.hydrateIcons();
+    render();
+  </script>
+</body>
+</html>

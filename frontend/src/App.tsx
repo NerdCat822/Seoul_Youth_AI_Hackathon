@@ -118,7 +118,13 @@ export function App() {
         onAuthenticated={changeSession}
       />
     );
-  return <StoreApp key={session.storeId} session={session} onSessionChanged={changeSession} />;
+  return (
+    <StoreApp
+      key={session.loginId ?? session.storeId}
+      session={session}
+      onSessionChanged={changeSession}
+    />
+  );
 }
 
 function StoreApp({
@@ -403,6 +409,7 @@ function StoreApp({
       {CHAT_ENABLED && data && (
         <>
           <ChatPanel
+            loginId={session.loginId}
             storeId={session.storeId ?? 0}
             open={chatOpen}
             onClose={() => showChat(false)}
