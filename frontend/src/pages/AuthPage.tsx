@@ -5,19 +5,32 @@ import { AddressSearch } from '../components/AddressSearch';
 import type { AuthSession, StoreAddress } from '../types';
 import './auth.css';
 
+function RequiredMark() {
+  return (
+    <b className="required-mark" aria-hidden="true">
+      *
+    </b>
+  );
+}
+
 function Field({
   name,
   label,
   error,
+  markRequired,
   ...input
 }: InputHTMLAttributes<HTMLInputElement> & {
   name: string;
   label: string;
   error?: string;
+  markRequired?: boolean;
 }) {
   return (
     <div className="form-field">
-      <label htmlFor={'auth-' + name}>{label}</label>
+      <label htmlFor={'auth-' + name}>
+        {label}
+        {markRequired && <RequiredMark />}
+      </label>
       <input
         {...input}
         name={name}
@@ -44,16 +57,14 @@ export function AuthPage({
   onAuthenticated: (session: AuthSession) => void;
 }) {
   const [address, setAddress] = useState<StoreAddress | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [focusAddressSearch, setFocusAddressSearch] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const addressTrigger = useRef<HTMLButtonElement>(null);
   const onSelected = useCallback((selected: StoreAddress) => {
     setAddress(selected);
-    setSearching(false);
     setMessage('');
     setErrors((current) => ({
       ...current,
@@ -67,11 +78,10 @@ export function AuthPage({
     }));
   }, []);
   useEffect(() => {
-    if (!address) return;
     const detail = formRef.current?.elements.namedItem('addressDetail') as HTMLInputElement | null;
     if (!detail) return;
     detail.value = '';
-    detail.focus();
+    if (address) detail.focus();
   }, [address]);
   const addressError =
     errors.address ||
@@ -105,6 +115,7 @@ export function AuthPage({
       if (!value('storeName')) issues.storeName = '가게 이름을 입력해주세요.';
       if (!value('upjong')) issues.upjong = '업종을 입력해주세요.';
       if (!address) issues.address = '주소 검색에서 가게 주소를 선택해주세요.';
+      if (!value('addressDetail')) issues.addressDetail = '상세 주소를 입력해주세요.';
       if (!value('openedDate')) issues.openedDate = '개업일을 입력해주세요.';
       if (!value('openTime')) issues.openTime = '영업 시작 시간을 입력해주세요.';
       if (!value('closeTime')) issues.closeTime = '영업 종료 시간을 입력해주세요.';
@@ -206,6 +217,7 @@ export function AuthPage({
                     label="가게 이름"
                     autoComplete="organization"
                     required
+                    markRequired
                     maxLength={100}
                     error={errors.storeName}
                   />
@@ -215,29 +227,41 @@ export function AuthPage({
                     placeholder="예: 분식"
                     maxLength={50}
                     required
+                    markRequired
                     error={errors.upjong}
                   />
-                  <div className="form-field" role="group" aria-labelledby="store-address-label">
+                  <div
+                    className="form-field"
+                    role="group"
+                    aria-labelledby="store-address-label"
+                    aria-invalid={!!addressError}
+                    aria-describedby={addressError ? 'address-error' : undefined}
+                    tabIndex={-1}
+                  >
                     <span className="auth-field-label" id="store-address-label">
                       가게 주소
+                      <RequiredMark />
+                      <span className="visually-hidden"> (필수)</span>
                     </span>
-                    <button
-                      id="address-search"
-                      ref={addressTrigger}
-                      type="button"
-                      className="button secondary"
-                      aria-haspopup="dialog"
-                      aria-invalid={!!addressError}
-                      aria-describedby={addressError ? 'address-error' : undefined}
-                      onClick={() => setSearching(true)}
-                    >
-                      {address ? '주소 다시 검색' : '주소 검색'}
-                    </button>
-                    {address && (
-                      <p className="selected-address" aria-live="polite">
-                        <small>우편번호 {address.postalCode}</small>
-                        {address.address}
-                      </p>
+                    {address ? (
+                      <div className="selected-address">
+                        <p aria-live="polite">
+                          <small>우편번호 {address.postalCode}</small>
+                          {address.address}
+                        </p>
+                        <button
+                          type="button"
+                          className="address-change"
+                          onClick={() => {
+                            setFocusAddressSearch(true);
+                            setAddress(null);
+                          }}
+                        >
+                          주소 다시 검색
+                        </button>
+                      </div>
+                    ) : (
+                      <AddressSearch onSelected={onSelected} focusOnOpen={focusAddressSearch} />
                     )}
                     {addressError && (
                       <span className="field-error" id="address-error">
@@ -247,9 +271,12 @@ export function AuthPage({
                   </div>
                   <Field
                     name="addressDetail"
-                    label="상세 주소 (선택)"
+                    label="상세 주소"
                     autoComplete="address-line2"
+                    disabled={!address}
                     maxLength={150}
+                    required
+                    markRequired
                     error={errors.addressDetail}
                   />
                   <Field
@@ -307,15 +334,6 @@ export function AuthPage({
           </p>
         )}
       </div>
-      {searching && (
-        <AddressSearch
-          onSelected={onSelected}
-          onClose={() => {
-            setSearching(false);
-            requestAnimationFrame(() => addressTrigger.current?.focus());
-          }}
-        />
-      )}
     </main>
   );
 }

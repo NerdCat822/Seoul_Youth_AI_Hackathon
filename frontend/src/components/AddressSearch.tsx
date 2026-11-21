@@ -4,21 +4,15 @@ import type { StoreAddress } from '../types';
 
 export function AddressSearch({
   onSelected,
-  onClose,
+  focusOnOpen,
 }: {
   onSelected: (address: StoreAddress) => void;
-  onClose: () => void;
+  focusOnOpen: boolean;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const frame = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    const modal = dialog.current;
-    modal?.showModal();
-    return () => modal?.close();
-  }, []);
   useEffect(() => {
     const container = frame.current;
     if (!container) return;
@@ -32,6 +26,8 @@ export function AddressSearch({
           width: '100%',
           height: '100%',
           minWidth: 220,
+          focusInput: focusOnOpen || attempt > 0,
+          maxSuggestItems: 6,
           shorthand: false,
           oncomplete(result) {
             if (!active) return;
@@ -43,6 +39,8 @@ export function AddressSearch({
           },
         });
         search.embed(container, { autoClose: false });
+        const iframe = container.querySelector('iframe');
+        if (iframe) iframe.title = '카카오 가게 주소 검색';
         setReady(true);
       })
       .catch((reason) => {
@@ -53,23 +51,9 @@ export function AddressSearch({
       active = false;
       container.replaceChildren();
     };
-  }, [attempt, onSelected]);
+  }, [attempt, focusOnOpen, onSelected]);
   return (
-    <dialog
-      className="address-dialog"
-      ref={dialog}
-      aria-labelledby="address-search-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-    >
-      <div className="address-tools">
-        <h2 id="address-search-title">가게 주소 검색</h2>
-        <button type="button" autoFocus onClick={onClose}>
-          닫기
-        </button>
-      </div>
+    <div className="address-search">
       {error ? (
         <div className="address-message" role="alert">
           <p>{error}</p>
@@ -89,6 +73,6 @@ export function AddressSearch({
         )
       )}
       <div className="postcode-frame" hidden={!!error} ref={frame} />
-    </dialog>
+    </div>
   );
 }

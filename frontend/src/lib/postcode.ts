@@ -15,6 +15,8 @@ interface PostcodeOptions {
   width: string;
   height: string;
   minWidth: number;
+  focusInput: boolean;
+  maxSuggestItems: number;
   shorthand: boolean;
 }
 

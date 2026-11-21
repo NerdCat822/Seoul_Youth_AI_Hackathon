@@ -14,7 +14,7 @@ public record SignupRequest(
         @NotBlank(message = "가게 이름을 입력해주세요.") @Size(max = 100, message = "가게 이름은 100자 이내로 입력해주세요.") String storeName,
         @NotBlank(message = "주소를 검색해주세요.") @Pattern(regexp = "[0-9]{5}", message = "우편번호는 5자리여야 해요.") String postalCode,
         @NotBlank(message = "주소를 검색해주세요.") @Size(max = 300, message = "주소는 300자 이내로 입력해주세요.") String address,
-        @Size(max = 150, message = "상세 주소는 150자 이내로 입력해주세요.") String addressDetail,
+        @NotBlank(message = "상세 주소를 입력해주세요.") @Size(max = 150, message = "상세 주소는 150자 이내로 입력해주세요.") String addressDetail,
         @NotBlank(message = "시도 코드를 확인해주세요.") @Pattern(regexp = "[0-9]{2}", message = "시도 코드는 2자리여야 해요.") String megaCd,
         @NotBlank(message = "시도 이름을 확인해주세요.") @Size(max = 30, message = "시도 이름은 30자 이내로 입력해주세요.") String megaNm,
         @NotBlank(message = "시군구 코드를 확인해주세요.") @Pattern(regexp = "[0-9]{5}", message = "시군구 코드는 5자리여야 해요.") String ctyCd,

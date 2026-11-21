@@ -67,7 +67,7 @@ class AccountService {
                 ON CONFLICT (login_id) DO NOTHING RETURNING store_id, store_name
                 """, (rs, row) -> new StorePrincipal(rs.getInt(1), rs.getString(2)),
                 normalize(form.loginId()), passwords.encode(form.password()), form.storeName().strip(),
-                form.postalCode(), form.address().strip(), form.addressDetail() == null ? "" : form.addressDetail().strip(),
+                form.postalCode(), form.address().strip(), form.addressDetail().strip(),
                 form.megaCd(), form.megaNm().strip(), form.ctyCd(), form.ctyNm().strip(), form.upjong().strip(),
                 form.openTime(), form.closeTime(), form.openedDate(), closed);
         if (inserted.isEmpty()) throw new DuplicateLoginException();

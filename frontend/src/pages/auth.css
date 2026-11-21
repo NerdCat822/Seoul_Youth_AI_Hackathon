@@ -111,7 +111,12 @@
   margin-bottom: 12px;
 }
 .selected-address {
-  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 12px;
   color: var(--navy);
   background: #eef7f1;
   border-radius: 8px;
@@ -126,32 +131,26 @@
   font-size: 12px;
   color: var(--muted);
 }
-.address-dialog {
-  border: 1px solid var(--line);
-  border-radius: 13px;
-  margin: auto;
-  width: min(95vw, 540px);
-  max-width: 95vw;
-  max-height: 92dvh;
+.required-mark {
+  color: #b82d34;
+  margin-inline-start: 3px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.address-search {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
   background: white;
-  color: inherit;
 }
-.address-dialog::backdrop {
-  background: #183c2e70;
-}
-.address-tools {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--line);
-}
-.address-tools h2 {
-  font-size: 17px;
-}
-.address-tools button,
+.address-change,
 .logout-button {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -162,7 +161,10 @@
   white-space: nowrap;
 }
 .postcode-frame {
-  height: min(68dvh, 500px);
+  height: 400px;
+}
+.form-field[aria-invalid='true'] .address-search {
+  border-color: #b94747;
 }
 .address-message {
   padding: 16px;
