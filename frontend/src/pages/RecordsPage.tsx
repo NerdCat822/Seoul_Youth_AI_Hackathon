@@ -12,6 +12,7 @@ export function RecordsPage({ experiments }: { experiments: Experiment[] }) {
           내 가게
         </a>
         <a href="#/calendar">달력으로 보기</a>
+        <a href="#/chats">대화 내역</a>
       </div>
       <div className="summary-tiles">
         <div>

@@ -1,0 +1,530 @@
+.chat-page {
+  max-width: 760px;
+  margin-inline: auto;
+}
+.chat-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-bottom: 4px;
+  font-size: 12px !important;
+  color: #44524c !important;
+}
+.chat-related {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--light);
+}
+.chat-related > span {
+  display: grid;
+  min-width: 0;
+}
+.chat-related small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.chat-related strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.chat-related > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.chat-day {
+  align-self: center;
+}
+.chat-day > span {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #f0f4f2;
+  font-size: 12px;
+  color: var(--muted);
+}
+.chat-row {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+.chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+/* 사장님 말: 오른쪽 회색 말풍선 */
+.chat-user {
+  align-self: flex-end;
+  max-width: 84%;
+}
+.chat-user .chat-body {
+  align-items: flex-end;
+  gap: 4px;
+}
+.chat-user .chat-text {
+  padding: 10px 18px;
+  border-radius: 22px;
+  background: #f1f3f2;
+}
+/* AI 답: 왼쪽에 아이콘, 말풍선 없이 글과 카드·선택지 */
+.chat-assistant {
+  align-self: stretch;
+}
+.chat-assistant .chat-body {
+  flex: 1;
+  align-items: flex-start;
+}
+.chat-assistant .chat-text {
+  padding-top: 4px;
+}
+.chat-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--light);
+  color: var(--blue);
+}
+.chat-avatar svg {
+  fill: currentColor;
+}
+.chat-text {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #202d28;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.chat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.chat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+a.chat-card:hover {
+  border-color: var(--blue);
+}
+.chat-card strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.chat-card p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.chat-card small {
+  font-size: 12px;
+  color: #44524c;
+}
+.chat-card .tag.chat-tag-menu {
+  background: #fff0e4;
+  color: #a8510f;
+}
+.chat-card .tag.chat-tag-operation {
+  background: #e8f0fd;
+  color: #2c5aa0;
+}
+.chat-card .tag.chat-tag-marketing {
+  background: #eef9f3;
+  color: #0b6b4c;
+}
+/* 그때 보여 준 선택지. 다시 보기 화면이라 누를 수는 없다. */
+.chat-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chat-options > li,
+.chat-chip {
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.chat-chip:not(:disabled):hover,
+button.chat-card:not(:disabled):hover {
+  border-color: var(--blue);
+}
+.chat-row time {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── 오른쪽 대화창 ─────────────────────────────────────────── */
+.chat-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+.chat-panel[hidden] {
+  display: none;
+}
+.chat-panel-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 10px;
+}
+.chat-panel-head h2 {
+  font-size: 17px;
+}
+.chat-panel-head > a {
+  justify-self: start;
+}
+.chat-collapse {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.chat-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 20px 18px;
+}
+.chat-scroll .chat-log {
+  margin: 0;
+}
+.chat-notice {
+  font-size: 13px;
+  color: #a8510f;
+}
+.chat-failed {
+  color: #a23a2c;
+}
+.chat-typing {
+  margin: 16px 0 0 40px;
+  font-size: 13px;
+  color: var(--muted);
+}
+button.chat-card {
+  text-align: left;
+  color: inherit;
+}
+/* 고를 수 있는 제안에는 번호를 붙인다. 선택지의 "1번", "2번"과 같은 순서다. */
+.chat-pick {
+  counter-reset: pick;
+}
+.chat-pick .chat-card strong::before {
+  counter-increment: pick;
+  content: counter(pick) '. ';
+}
+.chat-input {
+  margin: 0 16px 16px;
+  padding: 12px 12px 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+.chat-input:focus-within {
+  border-color: var(--blue);
+}
+.chat-input textarea {
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  resize: none;
+  font-size: 15px;
+  line-height: 1.5;
+  color: inherit;
+  background: transparent;
+}
+.chat-input-tools,
+.chat-input-right {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.chat-input-tools {
+  margin-top: 6px;
+}
+.chat-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.chat-round {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+}
+.chat-send {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+.chat-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 92px;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px #0b5b4240;
+}
+@media (min-width: 761px) {
+  .chat-panel {
+    inset: 78px 20px 20px auto;
+    width: 400px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: 0 12px 40px #1b3a2d1a;
+  }
+  .chat-fab {
+    right: 28px;
+    bottom: 28px;
+  }
+}
+/* 넓은 화면: 대화창이 펼쳐져 있으면 본문을 그 왼쪽 영역 가운데에 둔다. */
+@media (min-width: 1180px) {
+  .workspace.chat-open .screen {
+    width: calc(100% - 440px);
+    margin-left: max(0px, calc((100% - 440px - 920px) / 2));
+    margin-right: auto;
+  }
+  .workspace.chat-open .home-screen {
+    margin-left: max(0px, calc((100% - 440px - 1090px) / 2));
+  }
+}
+
+/* ── 디자인 파일(Trylog_Design, HM-02의 대화 영역)에서 읽은 수치 ───────────────── */
+.chat-panel,
+.chat-page {
+  --chat-ink: #030712;
+  --chat-body: #1e2939;
+  --chat-muted: #6a7282;
+  --chat-line: rgb(3 7 18 / 6%);
+  --chat-line-strong: rgb(3 7 18 / 12%);
+  --chat-primary: #00aa72;
+}
+.chat-panel-head {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--chat-line);
+}
+.chat-panel-head h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--chat-ink);
+}
+.chat-collapse {
+  min-height: 40px;
+  padding: 0 14px;
+  border-color: var(--chat-line-strong);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--chat-ink);
+}
+.chat-scroll {
+  padding: 32px 24px;
+}
+.chat-log {
+  gap: 32px;
+}
+.chat-row {
+  gap: 12px;
+}
+.chat-text {
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--chat-body);
+}
+.chat-user .chat-text {
+  padding: 12px 20px;
+  border-radius: 20px;
+  background: #f3f4f6;
+}
+.chat-avatar {
+  width: 32px;
+  height: 32px;
+  background: #e9f4eb;
+  color: var(--chat-primary);
+}
+.chat-assistant .chat-body {
+  gap: 12px;
+}
+.chat-options > li,
+.chat-chip {
+  padding: 6px 16px;
+  border-color: var(--chat-line-strong);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 23px;
+  color: var(--chat-ink);
+}
+.chat-cards {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-block: 8px;
+}
+.chat-card {
+  gap: 4px;
+  padding: 20px;
+  border-color: var(--chat-line);
+  border-radius: 12px;
+}
+.chat-card .tag {
+  margin-bottom: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.chat-card strong {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--chat-ink);
+}
+.chat-card p {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--chat-muted);
+}
+.chat-card small {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--chat-muted);
+}
+.chat-card .tag.chat-tag-menu {
+  background: #ffedd4;
+  color: #ca3500;
+}
+.chat-card .tag.chat-tag-operation {
+  background: #dff2fe;
+  color: #0069a8;
+}
+.chat-card .tag.chat-tag-marketing {
+  background: #ede9fe;
+  color: #7008e7;
+}
+.chat-input {
+  margin: 0 24px 24px;
+  padding: 16px;
+  border-color: var(--chat-line);
+  border-radius: 16px;
+}
+.chat-input textarea {
+  font-size: 16px;
+  line-height: 24px;
+}
+.chat-input textarea::placeholder {
+  color: rgb(3 7 18 / 40%);
+}
+.chat-input-tools {
+  margin-top: 12px;
+}
+.chat-round {
+  width: 40px;
+  height: 40px;
+  border-color: #d9d9d9;
+  color: var(--chat-ink);
+}
+.chat-send {
+  width: 36px;
+  height: 36px;
+  border-color: var(--chat-primary);
+  background: var(--chat-primary);
+  color: #fff;
+}
+.chat-fab {
+  background: var(--chat-primary);
+}
+@media (min-width: 761px) {
+  .chat-panel {
+    width: clamp(380px, 28.75vw, 552px);
+    border-color: var(--chat-line);
+    border-radius: 24px;
+  }
+}
+@media (min-width: 1180px) {
+  .workspace.chat-open .screen {
+    width: calc(100% - clamp(380px, 28.75vw, 552px) - 40px);
+    margin-left: max(0px, calc((100% - clamp(380px, 28.75vw, 552px) - 40px - 920px) / 2));
+  }
+  .workspace.chat-open .home-screen {
+    margin-left: max(0px, calc((100% - clamp(380px, 28.75vw, 552px) - 40px - 1090px) / 2));
+  }
+}
+/* 입력창의 초점 표시는 바깥 상자의 테두리 색으로 한다. 안쪽 글상자에 테두리를 겹쳐 그리지 않는다. */
+.chat-input textarea:focus,
+.chat-input textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
+}

@@ -100,6 +100,85 @@ export interface NeighborhoodCase {
   demo: boolean;
 }
 
+export interface ChatSession {
+  id: string;
+  title: string;
+  experimentId: string | null;
+  experimentTitle: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+  messageCount: number;
+  preview: string | null;
+}
+
+export interface ChatMessage {
+  id: number;
+  role: 'USER' | 'ASSISTANT';
+  content: string;
+  payload: unknown;
+  createdAt: string;
+}
+
+// 메시지 payload 안의 제안 카드. 그때 화면에 보여 준 내용을 그대로 담는다.
+export interface ChatCard {
+  caseId: string;
+  category: string;
+  title: string;
+  summary: string;
+  meta: string;
+}
+
+export interface ChatConversation {
+  session: ChatSession;
+  messages: ChatMessage[];
+}
+
+// 에이전트 서버(/api/v1/agent/chat)의 응답
+export interface AgentIdea {
+  id: string;
+  title: string;
+  category: Category;
+  difficulty: Difficulty;
+  cost: number;
+  durationDays: number;
+  summary: string;
+  reason: string;
+}
+
+export interface AgentChatResponse {
+  threadId: string;
+  status: 'ASKING' | 'AWAITING_CONFIRM' | 'IDEAS' | 'SAVED' | 'CANCELLED' | 'GUIDE';
+  reply: string;
+  draft: {
+    title: string;
+    category: Category;
+    startDate: string;
+    endDate: string;
+    notes: string;
+  } | null;
+  extra: {
+    targetMenuCode?: string | null;
+    targetMenuName?: string | null;
+    actionType?: string | null;
+    metric?: string | null;
+  };
+  notices: string[];
+  experiment: Experiment | null;
+  ideas: AgentIdea[];
+  source: 'LLM' | 'RULES';
+}
+
+// 대화 내역에 한 번 주고받은 말을 남길 때 보내는 본문
+export interface ChatExchange {
+  title: string;
+  experimentId: string | null;
+  messages: {
+    role: 'USER' | 'ASSISTANT';
+    content: string;
+    payload: { cards: ChatCard[]; options: string[] } | null;
+  }[];
+}
+
 export interface AppData {
   overview: Overview;
   menus: Menu[];

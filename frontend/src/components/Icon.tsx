@@ -13,7 +13,13 @@ export function Icon({
     | 'check'
     | 'note'
     | 'idea'
-    | 'bell';
+    | 'bell'
+    | 'chat'
+    | 'spark'
+    | 'menu'
+    | 'collapse'
+    | 'mic'
+    | 'send';
   size?: number;
 }) {
   const paths = {
@@ -52,6 +58,24 @@ export function Icon({
       </>
     ),
     check: <path d="m5 12 4 4L19 6" />,
+    menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+    collapse: <path d="m20 4-6 6m0-5v5h5M4 20l6-6m0 5v-5H5" />,
+    mic: (
+      <>
+        <rect x="9" y="3" width="6" height="11" rx="3" />
+        <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+      </>
+    ),
+    send: <path d="M12 19V5m-6 6 6-6 6 6" />,
+    spark: (
+      <>
+        <path d="m10 4 1.7 4.3L16 10l-4.3 1.7L10 16l-1.7-4.3L4 10l4.3-1.7Z" />
+        <path d="m18 14 .9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9Z" />
+      </>
+    ),
+    chat: (
+      <path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+    ),
     note: (
       <>
         <rect x="5" y="3" width="14" height="18" rx="2" />

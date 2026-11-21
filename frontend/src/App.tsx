@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { getSession, loadAppData, logOut, setSessionToken } from './api';
 import type { AppData, AuthSession, Experiment, SalesReport } from './types';
+import { CHAT_ENABLED } from './lib/features';
+import { maskedListPath, readRoute } from './lib/route';
 import { useQuery } from './lib/useQuery';
+import { ChatPanel } from './components/ChatPanel';
 import { Icon } from './components/Icon';
 import { HomePage } from './pages/HomePage';
 import { CalendarPage } from './pages/CalendarPage';
@@ -12,13 +15,19 @@ import { SamplePage } from './pages/SamplePage';
 import { ReportPage, ReportResult, UploadPage } from './pages/ReportPage';
 import { ForecastPage } from './pages/ForecastPage';
 import { AuthPage } from './pages/AuthPage';
+import { ChatDetailPage, ChatListPage } from './pages/ChatPage';
 
 function useRoute() {
-  const [route, setRoute] = useState(window.location.hash.slice(1) || '/');
+  const [route, setRoute] = useState(readRoute);
   useEffect(() => {
-    const update = () => setRoute(window.location.hash.slice(1) || '/');
+    const update = () => setRoute(readRoute());
+    // 주소가 같은 두 화면(ID를 감춘 서로 다른 시도) 사이를 오갈 때는 hashchange 없이 popstate만 온다.
     window.addEventListener('hashchange', update);
-    return () => window.removeEventListener('hashchange', update);
+    window.addEventListener('popstate', update);
+    return () => {
+      window.removeEventListener('hashchange', update);
+      window.removeEventListener('popstate', update);
+    };
   }, []);
   const [pathname, search = ''] = route.split('?');
   return { route, pathname, params: new URLSearchParams(search) };
@@ -125,6 +134,24 @@ function StoreApp({
   const [attempt, setAttempt] = useState(0);
   const [notice, setNotice] = useState('');
   const mainRef = useRef<HTMLElement>(null);
+  // 넓은 화면에서는 대화창을 오른쪽에 펼쳐 두고, 좁은 화면에서는 버튼으로 연다.
+  const [chatOpen, setChatOpen] = useState(() => {
+    try {
+      const saved = window.sessionStorage.getItem('trylog.chat.open');
+      if (saved) return saved === 'true';
+    } catch {
+      // 저장 공간을 못 쓰면 화면 너비로 정한다.
+    }
+    return window.matchMedia('(min-width: 1180px)').matches;
+  });
+  function showChat(open: boolean) {
+    setChatOpen(open);
+    try {
+      window.sessionStorage.setItem('trylog.chat.open', String(open));
+    } catch {
+      // 다음에 다시 열 때의 기본값만 달라진다.
+    }
+  }
   const [showAlerts, setShowAlerts] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const logoutPending = useRef(false);
@@ -173,18 +200,30 @@ function StoreApp({
   const experimentId = pathname.split('/')[2];
   const backPath = pathname.startsWith('/cases/')
     ? '/cases'
-    : pathname === '/forecast'
-      ? '/'
-      : pathname.endsWith('/report') || pathname.endsWith('/upload')
-        ? `/experiments/${experimentId}`
-        : '/records';
-  const isMain = ['/', '/calendar', '/records', '/cases'].includes(pathname);
+    : pathname.startsWith('/chats/')
+      ? '/chats'
+      : pathname === '/forecast'
+        ? '/'
+        : pathname.endsWith('/report') || pathname.endsWith('/upload')
+          ? `/experiments/${experimentId}`
+          : '/records';
+  const isMain = ['/', '/calendar', '/records', '/cases', '/chats'].includes(pathname);
   function created(experiment: Experiment) {
     setData(
       (current) => current && { ...current, experiments: [experiment, ...current.experiments] },
     );
     setNotice('시도를 저장했어요. 달력에도 함께 표시했어요.');
     window.location.hash = `/experiments/${encodeURIComponent(experiment.id)}`;
+  }
+  function savedInChat(experiment: Experiment) {
+    setData(
+      (current) =>
+        current &&
+        (current.experiments.some((item) => item.id === experiment.id)
+          ? current
+          : { ...current, experiments: [experiment, ...current.experiments] }),
+    );
+    setNotice('대화에서 시도를 저장했어요. 달력에도 함께 표시했어요.');
   }
   const [filePreview, setFilePreview] = useState<{ id: string; report: SalesReport } | null>(null);
   function compared(id: string, report: SalesReport) {
@@ -240,6 +279,15 @@ function StoreApp({
       />
     );
   else if (pathname === '/sample') page = <SamplePage />;
+  else if (pathname === '/chats') page = <ChatListPage />;
+  else if (pathname.startsWith('/chats/'))
+    page = (
+      <ChatDetailPage
+        key={route}
+        id={decodeURIComponent(pathname.slice('/chats/'.length))}
+        cases={data.cases}
+      />
+    );
   else if (pathname.startsWith('/cases/')) {
     const item = data.cases.find((item) => `/cases/${encodeURIComponent(item.id)}` === pathname);
     page = item ? <CaseDetailPage item={item} /> : <NotFound />;
@@ -255,9 +303,10 @@ function StoreApp({
         onCompared={compared}
       />
     );
-  } else page = <NotFound />;
+  } else if (maskedListPath(pathname)) page = <Reselect listPath={maskedListPath(pathname)!} />;
+  else page = <NotFound />;
   return (
-    <div className="workspace">
+    <div className={`workspace ${CHAT_ENABLED && chatOpen ? 'chat-open' : ''}`}>
       <a
         className="skip-link"
         href="#main-content"
@@ -351,6 +400,26 @@ function StoreApp({
           {notice}
         </div>
       </div>
+      {CHAT_ENABLED && data && (
+        <>
+          <ChatPanel
+            storeId={session.storeId ?? 0}
+            open={chatOpen}
+            onClose={() => showChat(false)}
+            onNavigate={() => {
+              // 좁은 화면에서는 대화창이 화면을 덮으므로, 다른 화면으로 갈 때 접는다.
+              if (!window.matchMedia('(min-width: 1180px)').matches) showChat(false);
+            }}
+            onSaved={savedInChat}
+          />
+          {!chatOpen && (
+            <button type="button" className="chat-fab" onClick={() => showChat(true)}>
+              <Icon name="chat" size={20} />
+              대화
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -432,6 +501,19 @@ function ExperimentRoute({
     );
   return (
     <ReportPage experiment={experiment} menus={data.menus} previewMenu={preview ? menu : null} />
+  );
+}
+
+// 주소에 ID가 없어서 어떤 기록인지 알 수 없을 때(감춘 주소를 복사해 새로 연 경우).
+function Reselect({ listPath }: { listPath: string }) {
+  return (
+    <section className="empty-state">
+      <h1>다시 선택해주세요</h1>
+      <p>이 주소만으로는 어떤 기록인지 알 수 없어요. 목록에서 다시 골라주세요.</p>
+      <a className="button" href={`#${listPath}`}>
+        목록으로 가기
+      </a>
+    </section>
   );
 }
 
