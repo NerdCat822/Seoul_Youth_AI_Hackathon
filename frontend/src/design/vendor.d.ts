@@ -12,6 +12,16 @@ interface DesignModal {
 }
 
 interface Window {
+  TRYLOG: {
+    notifications: {
+      href: string;
+      icon: string;
+      title: string;
+      body: string;
+      time: string;
+      unread: boolean;
+    }[];
+  };
   App: {
     toast: (message: string) => void;
     esc: (value: unknown) => string;
@@ -20,5 +30,6 @@ interface Window {
     closeModal: () => void;
     hydrateIcons: (root?: ParentNode) => void;
     badge: (status: string) => string;
+    notifPanel: () => string;
   };
 }

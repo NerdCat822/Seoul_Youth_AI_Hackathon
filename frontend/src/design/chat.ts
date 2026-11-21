@@ -67,7 +67,7 @@ export async function mountChat(
   host: HTMLElement,
   compact: boolean,
   data: AppData | null,
-  initialMode?: string,
+  signal: AbortSignal,
 ) {
   const { esc, icon, toast, hydrateIcons } = window.App;
   if (!CHAT_ENABLED) {
@@ -109,6 +109,7 @@ export async function mountChat(
     sendButton.disabled = busy || voiceBusy || Array.from(input.value.trim()).length > 500;
   }
   function remember(id: string) {
+    if (signal.aborted) return;
     if (activeKey) {
       try {
         sessionStorage.setItem(activeKey, id);
@@ -119,7 +120,7 @@ export async function mountChat(
     if (!compact && params.get('thread') !== id) {
       const url = new URL(location.href);
       url.search = new URLSearchParams({ thread: id }).toString();
-      history.replaceState(null, '', url);
+      history.replaceState(history.state, '', url);
     }
   }
   function scrollLog() {
@@ -244,7 +245,7 @@ export async function mountChat(
         (draft ? draftCard(draft, confirm) : confirm ? confirmActions() : '');
       if (reply.experiment) actions += savedCard(reply.experiment);
       const content = [reply.reply, ...reply.notices].filter(Boolean).join('\n');
-      currentActions = append('ASSISTANT', content, actions);
+      if (!signal.aborted) currentActions = append('ASSISTANT', content, actions);
       const payload =
         draft || cards.length || options.length || reply.experiment
           ? { cards, options, draft, experimentId: reply.experiment?.id }
@@ -263,9 +264,10 @@ export async function mountChat(
           ],
         });
       } catch {
-        toast('대화 내역을 저장하지 못했어요.');
+        if (!signal.aborted) toast('대화 내역을 저장하지 못했어요.');
       }
     } catch (error) {
+      if (signal.aborted) return;
       waiting.remove();
       append('ASSISTANT', errorMessage(error));
       currentActions
@@ -275,9 +277,11 @@ export async function mountChat(
         });
     } finally {
       busy = false;
-      updateSend();
-      updateVoice();
-      input.focus();
+      if (!signal.aborted) {
+        updateSend();
+        updateVoice();
+        input.focus();
+      }
     }
   }
   form.addEventListener('submit', (event) => {
@@ -379,7 +383,7 @@ export async function mountChat(
           : ' fixed right-6 top-20 bottom-6 z-40 w-[552px] max-w-[calc(100vw-48px)] shadow-pop');
       mountVoice(open);
     };
-    media.addEventListener('change', () => layout(media.matches));
+    media.addEventListener('change', () => layout(media.matches), { signal });
     find('[data-panel-min]').onclick = () => layout(false);
     fab.onclick = () => {
       layout(true);
@@ -411,7 +415,7 @@ export async function mountChat(
       find('[data-panel-title]').textContent = list.hidden ? '대화' : '대화 목록';
       if (!list.hidden) {
         try {
-          sessions = await request<ChatSession[]>('/chats');
+          sessions = await request<ChatSession[]>('/chats', { signal });
           filter();
         } catch (e) {
           items.textContent = errorMessage(e);
@@ -419,13 +423,18 @@ export async function mountChat(
       }
     };
   } else mountVoice(true);
-  window.addEventListener('pagehide', () => mountVoice(false));
-  window.addEventListener('pageshow', (e) => {
-    if (e.persisted) mountVoice(open);
-  });
+  signal.addEventListener('abort', () => mountVoice(false), { once: true });
+  window.addEventListener('pagehide', () => mountVoice(false), { signal });
+  window.addEventListener(
+    'pageshow',
+    (e) => {
+      if (e.persisted) mountVoice(open);
+    },
+    { signal },
+  );
   if (!data) return;
 
-  const mode = initialMode ?? params.get('start');
+  const mode = params.get('start');
   const idea = data.cases.find((item) => item.id === params.get('idea'));
   const previous =
     mode === 'next' ? data.experiments.find((item) => item.id === params.get('id')) : undefined;
@@ -445,14 +454,17 @@ export async function mountChat(
               : '';
   }
   try {
-    const session = await getSession();
+    const session = await getSession(signal);
+    signal.throwIfAborted();
     if (session.loginId)
       activeKey = `trylog.design.thread.${data.overview.storeId}.${session.loginId}`;
     const saved =
       params.get('thread') || (!fresh && activeKey ? sessionStorage.getItem(activeKey) : null);
     if (saved && !userInteracted) {
-      const history = await request<ChatConversation>('/chats/' + encodeURIComponent(saved));
-      if (userInteracted) return;
+      const history = await request<ChatConversation>('/chats/' + encodeURIComponent(saved), {
+        signal,
+      });
+      if (userInteracted || signal.aborted) return;
       threadId = history.session.id;
       title = history.session.title;
       history.messages.forEach((message, index) => {
@@ -490,6 +502,7 @@ export async function mountChat(
       remember(threadId);
     }
   } catch (error) {
+    if (signal.aborted) return;
     if (params.has('thread')) append('ASSISTANT', errorMessage(error));
   }
   if (!compact && !log.childElementCount) {

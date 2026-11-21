@@ -112,15 +112,12 @@ export async function mountAuth(page: string, session?: AuthSession) {
   const finish = second.querySelector<HTMLButtonElement>('[type=submit]')!;
   const group = second.querySelector<HTMLElement>('[data-chip-group=single]')!;
   group.replaceChildren();
+  second
+    .querySelectorAll(
+      ':scope > div:has(#s-menu, #s-hours), :scope > fieldset:has([data-chip-group=multi])',
+    )
+    .forEach((field) => field.remove());
   const picker = addressPicker();
-  const unsupported = '현재 가입 API에서 저장을 지원하지 않아요.';
-  field('s-menu').disabled = true;
-  field('s-menu').title = unsupported;
-  second.querySelectorAll<HTMLButtonElement>('[data-chip-group=multi] button').forEach((button) => {
-    button.disabled = true;
-    button.title = unsupported;
-    button.setAttribute('aria-pressed', 'false');
-  });
   function step(n: number) {
     document.querySelectorAll<HTMLElement>('[data-step]').forEach((el) => {
       el.hidden = el.dataset.step !== String(n);
@@ -189,8 +186,7 @@ export async function mountAuth(page: string, session?: AuthSession) {
     for (const input of second.querySelectorAll('[aria-invalid=true]'))
       input.removeAttribute('aria-invalid');
     const address = picker.selected;
-    const store = field('s-name'),
-      hours = field('s-hours');
+    const store = field('s-name');
     const upjong = group.querySelector<HTMLElement>('[aria-pressed=true]')?.dataset.code;
     if (!store.value.trim()) return formError(second, '가게 이름을 입력해 주세요.', store);
     if (!address)
@@ -198,11 +194,6 @@ export async function mountAuth(page: string, session?: AuthSession) {
     if (!picker.detail.value.trim())
       return formError(second, '상세 주소를 입력해 주세요.', picker.detail);
     if (!upjong) return formError(second, '업종을 선택해 주세요.');
-    const time = hours.value
-      .trim()
-      .match(/^([01]?\d|2[0-3]):([0-5]\d)\s*[~–-]\s*([01]?\d|2[0-3]):([0-5]\d)$/);
-    if (hours.value.trim() && !time)
-      return formError(second, '영업시간을 11:00 ~ 21:00 형식으로 입력해 주세요.', hours);
     const back = second.querySelector<HTMLButtonElement>('[data-back]')!;
     finish.disabled = back.disabled = true;
     try {
@@ -213,8 +204,6 @@ export async function mountAuth(page: string, session?: AuthSession) {
         storeName: store.value.trim(),
         addressDetail: picker.detail.value.trim(),
         upjong,
-        openTime: time ? time[1].padStart(2, '0') + ':' + time[2] : undefined,
-        closeTime: time ? time[3].padStart(2, '0') + ':' + time[4] : undefined,
       });
       announceLogin(account);
       field('s-pw').value = '';

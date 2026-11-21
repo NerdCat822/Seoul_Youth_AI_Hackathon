@@ -2,13 +2,19 @@ import { getSession, loadAppData, logOut, setSessionToken } from '../api';
 import type { AppData, AuthSession } from '../types';
 import { mountAccountScreen } from './settings';
 import { afterLogin, loginForCurrentPage } from './navigation';
+import './responsive.css';
+import './responsive-records.css';
+import {
+  contentRegion,
+  installNavigation,
+  isServiceScreen,
+  loadLayout,
+  screenName,
+  sectionFor,
+} from './screen-router';
 
-const page =
-  location.pathname
-    .split('/')
-    .pop()
-    ?.replace(/\.html$/, '') || 'index';
-const main = document.querySelector<HTMLElement>('main')!;
+const page = screenName(new URL(location.href));
+document.body.dataset.screen = page;
 const publicPage = ['index', 'login', 'signup', 'home-guest'].includes(page);
 const authPage = page === 'login' || page === 'signup';
 const sessionChannel =
@@ -20,8 +26,8 @@ window.addEventListener('pageshow', (event) => {
   if (event.persisted) location.reload();
 });
 
-async function header(session: AuthSession | null, data: AppData | null) {
-  const notifications = (data?.experiments ?? [])
+function notificationsFor(data: AppData | null) {
+  return (data?.experiments ?? [])
     .filter((item) => item.status === 'READY')
     .map((item) => ({
       href: 'record.html?id=' + encodeURIComponent(item.id),
@@ -31,6 +37,10 @@ async function header(session: AuthSession | null, data: AppData | null) {
       body: '시도 결과를 확인할 수 있어요.',
       time: item.checkDate,
     }));
+}
+
+async function header(session: AuthSession | null, data: AppData | null) {
+  const notifications = notificationsFor(data);
   Object.assign(window, {
     TRYLOG: {
       store: { name: session?.storeName ?? '', email: session?.loginId ?? '' },
@@ -92,9 +102,122 @@ async function header(session: AuthSession | null, data: AppData | null) {
   );
 }
 
+function selectSection(nav: string) {
+  const bar = document.querySelector<HTMLElement>('header[data-topbar]')!;
+  for (const link of bar.querySelectorAll<HTMLAnchorElement>('nav a, a.menu-item')) {
+    const active = screenName(new URL(link.href)) === nav;
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+    if (link.matches('nav a')) {
+      link.classList.toggle('border-brand', active);
+      link.classList.toggle('border-transparent', !active);
+      link.firstElementChild!.classList.toggle('text-brand-text', active);
+      link.firstElementChild!.classList.toggle('text-heading', !active);
+    } else {
+      link.classList.toggle('text-brand-text', active);
+      link.classList.toggle('font-semibold', active);
+    }
+  }
+}
+
+function refreshNotifications(data: AppData) {
+  const bar = document.querySelector<HTMLElement>('header[data-topbar]')!;
+  const previous = window.TRYLOG.notifications;
+  const read = new Set(previous.filter((item) => !item.unread).map((item) => item.href));
+  const next = notificationsFor(data).map((item) => ({ ...item, unread: !read.has(item.href) }));
+  if (JSON.stringify(next) !== JSON.stringify(previous)) {
+    window.TRYLOG.notifications = next;
+    bar.querySelector<HTMLElement>('[data-popover="notif"]')!.innerHTML = window.App.notifPanel();
+    bar.querySelector<HTMLElement>('[data-unread-dot]')!.hidden = !next.some((item) => item.unread);
+  }
+}
+
+async function mountScreen(
+  name: string,
+  session: AuthSession,
+  data: AppData | null,
+  signal: AbortSignal,
+) {
+  const main = document.querySelector<HTMLElement>('main')!;
+  if (['login', 'signup'].includes(name)) {
+    const { mountAuth } = await import('./auth');
+    signal.throwIfAborted();
+    await mountAuth(name, session);
+  } else if (['home', 'home-guest', 'explore', 'idea', 'forecast', 'baseline'].includes(name)) {
+    const { mountDashboard } = await import('./dashboard');
+    signal.throwIfAborted();
+    await mountDashboard(name, data, signal);
+  } else if (data) {
+    if (name === 'ai') {
+      const { mountChat } = await import('./chat');
+      signal.throwIfAborted();
+      await mountChat(main, false, data, signal);
+    } else if (name === 'store' || name === 'settings') {
+      await mountAccountScreen(name, session, data, signal);
+    } else {
+      const { mountRecords } = await import('./records');
+      signal.throwIfAborted();
+      await mountRecords(name, data, signal);
+    }
+  }
+  if (!signal.aborted) main.hidden = false;
+}
+
+function serviceNavigation(session: AuthSession, initial: AbortController) {
+  let view = initial;
+  async function visit(url: URL, scroll: number) {
+    view.abort();
+    view = new AbortController();
+    const { signal } = view;
+    selectSection(sectionFor(url)!);
+    const old = contentRegion(document);
+    old.inert = true;
+    old.setAttribute('aria-busy', 'true');
+    window.App.closeModal();
+    for (const pop of document.querySelectorAll<HTMLElement>('[data-popover]')) pop.hidden = true;
+    for (const button of document.querySelectorAll('[data-pop]'))
+      button.setAttribute('aria-expanded', 'false');
+    try {
+      const [layout, current] = await Promise.all([loadLayout(url, signal), getSession(signal)]);
+      signal.throwIfAborted();
+      if (!current.authenticated) {
+        location.replace(loginForCurrentPage());
+        return;
+      }
+      if (current.storeId !== session.storeId || current.loginId !== session.loginId) {
+        location.reload();
+        return;
+      }
+      setSessionToken(current.csrfToken);
+      const data = await loadAppData(signal);
+      signal.throwIfAborted();
+      const name = screenName(url);
+      const next = layout.content.cloneNode(true) as HTMLElement;
+      old.replaceWith(next);
+      document.body.dataset.nav = layout.nav;
+      document.body.dataset.screen = name;
+      document.title = layout.title;
+      refreshNotifications(data);
+      window.App.hydrateIcons(next);
+      await mountScreen(name, current, data, signal);
+      signal.throwIfAborted();
+      const main = document.querySelector<HTMLElement>('main')!;
+      if (!document.querySelector('header[data-topbar]')!.contains(document.activeElement)) {
+        main.tabIndex = -1;
+        main.focus({ preventScroll: true });
+      }
+      window.scrollTo({ top: scroll, behavior: 'instant' });
+    } catch (error) {
+      if (!signal.aborted) showError(error, () => void visit(url, scroll));
+    }
+  }
+  installNavigation((url, scroll) => void visit(url, scroll));
+}
+
 async function start() {
   // The gallery is the supplied screen directory and can be opened without a store.
   if (page === 'index') {
+    const main = document.querySelector<HTMLElement>('main')!;
     const session = await getSession().catch(() => null);
     const data = session?.authenticated ? await loadAppData().catch(() => null) : null;
     await header(session, data);
@@ -111,6 +234,7 @@ async function start() {
       if (item) target.searchParams.set('id', item.id);
       link.href = target.href;
     }
+    main.hidden = false;
   } else {
     const session = await getSession();
     setSessionToken(session.csrfToken);
@@ -133,24 +257,20 @@ async function start() {
     }
     const data = session.authenticated ? await loadAppData() : null;
     await header(session, data);
-    if (authPage) {
-      await (await import('./auth')).mountAuth(page, session);
-    } else if (['home', 'home-guest', 'explore', 'idea', 'forecast', 'baseline'].includes(page)) {
-      await (await import('./dashboard')).mountDashboard(page, data);
-    } else if (data) {
-      if (page === 'ai') {
-        await (await import('./chat')).mountChat(main, false, data);
-      } else if (page === 'store' || page === 'settings') {
-        await mountAccountScreen(page, session, data);
-      } else {
-        await (await import('./records')).mountRecords(page, data);
-      }
+    const initial = new AbortController();
+    if (session.authenticated && isServiceScreen(new URL(location.href)))
+      serviceNavigation(session, initial);
+    try {
+      await mountScreen(page, session, data, initial.signal);
+    } catch (error) {
+      if (!initial.signal.aborted) throw error;
     }
   }
-  main.hidden = false;
 }
 
-start().catch((error: unknown) => {
+function showError(error: unknown, retryAction: () => void) {
+  const old = contentRegion(document);
+  const main = document.createElement('main');
   const title = document.createElement('h1');
   title.className = 'page-title';
   title.textContent = '화면을 불러오지 못했어요';
@@ -160,8 +280,10 @@ start().catch((error: unknown) => {
   const retry = document.createElement('button');
   retry.className = 'btn btn-lg btn-primary mt-6';
   retry.textContent = '다시 불러오기';
-  retry.onclick = () => location.reload();
+  retry.onclick = retryAction;
   main.className = 'container-main py-12';
   main.replaceChildren(title, message, retry);
-  main.hidden = false;
-});
+  old.replaceWith(main);
+}
+
+start().catch((error: unknown) => showError(error, () => location.reload()));

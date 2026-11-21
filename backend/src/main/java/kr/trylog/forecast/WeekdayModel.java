@@ -70,7 +70,7 @@ final class WeekdayModel {
         return new SalesForecast.Historical(start, end, actual, expected, actual - expected);
     }
 
-    private static Long estimate(NavigableMap<LocalDate, Long> history, LocalDate target) {
+    static Long estimate(NavigableMap<LocalDate, Long> history, LocalDate target) {
         long sum = 0;
         for (int lag = 1; lag <= 4; lag++) {
             Long observed = history.get(target.minusWeeks(lag));

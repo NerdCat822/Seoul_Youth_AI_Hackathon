@@ -164,17 +164,9 @@ export function AuthPage({
       if (!value('upjong')) issues.upjong = '업종을 선택해주세요.';
       if (!address) issues.address = '주소 검색에서 가게 주소를 선택해주세요.';
       if (!value('addressDetail')) issues.addressDetail = '상세 주소를 입력해주세요.';
-      const scheduleFields = event.currentTarget.querySelectorAll<HTMLInputElement>(
-        'input[type="date"], input[type="time"]',
-      );
-      for (const field of scheduleFields) {
-        if (field.validity.badInput) {
-          issues[field.name] =
-            field.type === 'date'
-              ? '개업일을 정확히 입력하거나 비워주세요.'
-              : '시간을 정확히 입력하거나 비워주세요.';
-        }
-      }
+      const openedDate = event.currentTarget.querySelector<HTMLInputElement>('[name="openedDate"]');
+      if (openedDate?.validity.badInput)
+        issues.openedDate = '개업일을 정확히 입력하거나 비워주세요.';
     }
     setMessage('');
     displayErrors(issues);
@@ -191,8 +183,6 @@ export function AuthPage({
               storeName: value('storeName'),
               upjong: value('upjong'),
               addressDetail: value('addressDetail'),
-              openTime: value('openTime') || undefined,
-              closeTime: value('closeTime') || undefined,
               openedDate: value('openedDate') || undefined,
               closedWeekdays: fields.has('closedWeekdays')
                 ? fields.getAll('closedWeekdays').map(Number)
@@ -317,20 +307,6 @@ export function AuthPage({
                     type="date"
                     error={errors.openedDate}
                   />
-                  <div className="auth-hours">
-                    <Field
-                      name="openTime"
-                      label="영업 시작 시간 (선택)"
-                      type="time"
-                      error={errors.openTime}
-                    />
-                    <Field
-                      name="closeTime"
-                      label="영업 종료 시간 (선택)"
-                      type="time"
-                      error={errors.closeTime}
-                    />
-                  </div>
                   <fieldset className="weekday-choice">
                     <legend>정기 휴무일 (선택)</legend>
                     {['월', '화', '수', '목', '금', '토', '일'].map((day, index) => (

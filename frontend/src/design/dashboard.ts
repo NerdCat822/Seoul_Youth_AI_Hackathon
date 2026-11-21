@@ -4,6 +4,7 @@ import { difficulties } from '../lib/labels';
 import type { Forecast } from '../pages/ForecastPage';
 import type { AppData, Experiment, NeighborhoodCase } from '../types';
 import { mountChat } from './chat';
+import { loadWeekSales, mountHomeWeek, upcomingDates } from './home-week';
 
 const categoryStyle = {
   MENU: { label: '메뉴·가격', tag: 'cat-menu', image: 'bg-cat-menu-img' },
@@ -14,7 +15,6 @@ const dayColors = ['#155dfc', '#00b8db', '#ad46ff', '#f6339a'];
 const number = new Intl.NumberFormat('ko-KR');
 const won = (value: number) => number.format(value) + '원';
 const lengthLabel = (days: number) => (days % 7 === 0 ? days / 7 + '주' : days + '일');
-const params = new URLSearchParams(location.search);
 function el<T extends HTMLElement = HTMLElement>(selector: string, root: ParentNode = document): T {
   const found = root.querySelector<T>(selector);
   if (!found) throw new Error('화면을 열지 못했어요.');
@@ -109,34 +109,15 @@ function miniCalendar(data: AppData) {
     .join('');
 }
 
-async function homeForecast() {
-  const total = el('[data-fc-total]');
-  const box = total.closest('section')!;
-  const period = el('h2 + p', box);
-  const through = total.nextElementSibling!;
-  period.textContent = '';
-  through.textContent = '';
-  try {
-    const f = await request<Forecast>('/demo/forecast');
-    through.textContent = f.dataThrough ? formatDate(f.dataThrough) + ' 판매자료 기준' : '';
-    if (f.status !== 'READY' || !f.days.length) {
-      total.textContent = '판매 자료가 더 필요해요';
-      return;
-    }
-    period.textContent = dateRange(f.days[0].date, f.days.at(-1)!.date);
-    total.textContent = won(f.days.reduce((sum, d) => sum + d.expected, 0));
-    const peak = Math.max(...f.days.map((d) => d.expected), 1);
-    el('[data-fc-bars]').innerHTML =
-      `<div class="flex h-[104px] items-end">${f.days.map((d) => `<div class="bar-col px-[22px]" title="${formatDate(d.date)} ${won(d.expected)}"><div class="bar rounded-t-md bg-gradient-to-b from-[#22c58b] to-brand" style="height:${Math.round((d.expected / peak) * 100)}%;opacity:${d.expected === peak ? 1 : 0.8}"></div></div>`).join('')}</div><div class="mt-3 flex">${f.days.map((d, i) => `<span class="flex-1 text-center text-[13px] font-medium text-sub">${i ? asDate(d.date).getUTCDate() + '일' : formatDate(d.date)}</span>`).join('')}</div>`;
-  } catch (err) {
-    total.textContent = '예상매출을 불러오지 못했어요.';
-    through.textContent = err instanceof Error ? err.message : '';
-  }
-}
-
-function home(data: AppData) {
+function home(data: AppData, signal: AbortSignal) {
   const { overview, experiments } = data;
-  text('main h1 .text-brand', overview.storeName);
+  const title = el('main h1');
+  title.parentElement!.parentElement!.classList.add('home-records-heading');
+  const heading = document.createElement('h2');
+  heading.className = 'section-title';
+  heading.textContent = overview.storeName + ' 기록 현황';
+  title.replaceWith(heading);
+  mountHomeWeek(el('[data-fc-total]').closest('section')!, data, signal);
   const count = (status: Experiment['status']) =>
     experiments.filter((e) => e.status === status).length;
   text('[data-greet]', `결과를 확인할 기록이 ${count('READY')}건 있어요.`);
@@ -192,7 +173,7 @@ function explore(data: AppData) {
   const list = data.cases;
   const tabs = [['all', '전체'], ...Object.entries(categoryStyle).map(([k, c]) => [k, c.label])];
   let current = 'all';
-  let free = params.get('free') === '1';
+  let free = new URLSearchParams(location.search).get('free') === '1';
   const section = el('[data-rec-section]');
   el('h2', section).textContent = data.overview.storeName + '에 맞는 추천';
   el('p', section).textContent = '가게별 맞춤 추천은 아직 제공되지 않아요.';
@@ -227,7 +208,7 @@ function explore(data: AppData) {
 }
 
 function idea(data: AppData) {
-  const id = params.get('id');
+  const id = new URLSearchParams(location.search).get('id');
   const item = id ? data.cases.find((i) => i.id === id) : data.cases[0];
   const link = el<HTMLAnchorElement>('[data-try]');
   if (!item) {
@@ -281,8 +262,18 @@ function statCards(stats: string[][]) {
     .join('');
 }
 
-function forecast(f: Forecast) {
-  const ready = f.status === 'READY' && f.days.length > 0;
+type ChartDay = {
+  date: string;
+  expected: number | null;
+  lower?: number | null;
+  upper?: number | null;
+};
+type ForecastView = Partial<Pick<Forecast, 'status' | 'dataThrough' | 'model' | 'missingDates'>> & {
+  days: ChartDay[];
+};
+
+function forecast(f: ForecastView) {
+  const ready = f.status !== 'INSUFFICIENT_DATA' && f.days.length > 0;
   const empty = el('[data-state="empty"]');
   const filled = el('[data-state="ready"]');
   empty.hidden = ready;
@@ -297,7 +288,7 @@ function forecast(f: Forecast) {
   if (!ready) {
     text('[data-sub]', through);
     el('[role="progressbar"]', empty).hidden = true;
-    el('p.mt-3', empty).textContent = f.missingDates.length
+    el('p.mt-3', empty).textContent = f.missingDates?.length
       ? '자료가 필요한 날짜 · ' + f.missingDates.map((d) => formatDate(d)).join(', ')
       : '전망에 필요한 일매출 이력이 부족해요.';
     el('ul', empty).lastElementChild!.textContent =
@@ -307,19 +298,31 @@ function forecast(f: Forecast) {
   const days = f.days;
   const range = dateRange(days[0].date, days.at(-1)!.date);
   text('[data-sub]', [range, through].filter(Boolean).join(' · '));
-  el('p.mt-8', filled).textContent = f.model ?? '가게 판매 자료를 기준으로 계산한 전망이에요.';
-  const total = days.reduce((sum, d) => sum + d.expected, 0);
-  const top = days.reduce((best, d) => (d.expected > best.expected ? d : best));
-  statCards([
-    ['7일 합계', won(total), range],
-    ['하루 평균', won(Math.round(total / days.length)), days.length + '일 평균'],
-    ['가장 많은 날', formatDate(top.date, true), won(top.expected)],
-  ]);
+  const known = days.filter((day): day is ChartDay & { expected: number } => day.expected !== null);
+  const complete = known.length === 7;
+  const peak = Math.max(1, ...known.map((day) => day.expected));
+  el('[data-stats]').hidden = !complete;
+  el('p.mt-8', filled).textContent = complete
+    ? (f.model ?? '가게 판매 자료를 기준으로 계산한 전망이에요.')
+    : `7일 중 ${known.length}일의 예상 매출 자료가 있어요.`;
+  if (complete) {
+    const total = known.reduce((sum, day) => sum + day.expected, 0);
+    const top = known.reduce((best, day) => (day.expected > best.expected ? day : best));
+    statCards([
+      ['7일 합계', won(total), range],
+      ['하루 평균', won(Math.round(total / days.length)), days.length + '일 평균'],
+      ['가장 많은 날', formatDate(top.date, true), won(top.expected)],
+    ]);
+  }
   el('[data-bars]').innerHTML = days
-    .map(
-      (d) =>
-        `<div class="flex h-full flex-1 flex-col items-center justify-end gap-2 px-5" title="${d.lower != null && d.upper != null ? '참고 범위 ' + won(d.lower) + ' ~ ' + won(d.upper) : won(d.expected)}"><span class="text-[13px] font-medium text-sub">${number.format(d.expected)}</span><div class="w-full max-w-[64px] rounded-t-md bg-brand" style="height:${(d.expected / Math.max(1, top.expected)) * 80}%"></div></div>`,
-    )
+    .map((d) => {
+      const label = d.expected === null ? '예측 자료 없음' : won(d.expected);
+      const title =
+        d.lower != null && d.upper != null
+          ? '참고 범위 ' + won(d.lower) + ' ~ ' + won(d.upper)
+          : label;
+      return `<div class="flex h-full flex-1 flex-col items-center justify-end gap-2 px-5" role="img" aria-label="${formatDate(d.date, true)} 예상 매출 ${label}" data-date="${formatDate(d.date, true)}" style="--sales-ratio:${((d.expected ?? 0) / peak) * 100}%" title="${title}"><span class="text-[13px] font-medium text-sub">${d.expected === null ? label : number.format(d.expected)}</span><div class="forecast-bar w-full max-w-[64px] rounded-t-md bg-brand"></div></div>`;
+    })
     .join('');
   el('[data-xaxis]').innerHTML = days
     .map(
@@ -331,7 +334,7 @@ function forecast(f: Forecast) {
 
 function baseline(f: Forecast, data: AppData) {
   const ret = el<HTMLAnchorElement>('a[href="result.html"]');
-  const id = params.get('id');
+  const id = new URLSearchParams(location.search).get('id');
   ret.href = id ? 'result.html?id=' + encodeURIComponent(id) : 'forecast.html';
   if (!id) ret.textContent = '예상매출로 돌아가기';
   const history = f.historical;
@@ -364,15 +367,15 @@ function baseline(f: Forecast, data: AppData) {
   );
 }
 
-export async function mountDashboard(page: string, data: AppData | null) {
+export async function mountDashboard(page: string, data: AppData | null, signal: AbortSignal) {
   if (page === 'home-guest') {
     guest(data);
-    await mountChat(el('[data-ai-host]'), true, data);
+    await mountChat(el('[data-ai-host]'), true, data, signal);
   } else if (data) {
     switch (page) {
       case 'home':
-        home(data);
-        await Promise.all([homeForecast(), mountChat(el('[data-ai-host]'), true, data)]);
+        home(data, signal);
+        await mountChat(el('[data-ai-host]'), true, data, signal);
         break;
       case 'explore':
         explore(data);
@@ -381,12 +384,23 @@ export async function mountDashboard(page: string, data: AppData | null) {
         idea(data);
         break;
       case 'forecast':
-        forecast(await request<Forecast>('/demo/forecast'));
+      case 'baseline': {
+        if (
+          page === 'forecast' &&
+          new URLSearchParams(location.search).get('week') === 'upcoming'
+        ) {
+          const days = await loadWeekSales(upcomingDates(data.overview.today), signal);
+          signal.throwIfAborted();
+          forecast({ days });
+          break;
+        }
+        const values = await request<Forecast>('/demo/forecast', { signal });
+        signal.throwIfAborted();
+        if (page === 'forecast') forecast(values);
+        else baseline(values, data);
         break;
-      case 'baseline':
-        baseline(await request<Forecast>('/demo/forecast'), data);
-        break;
+      }
     }
   }
-  window.App.hydrateIcons();
+  if (!signal.aborted) window.App.hydrateIcons();
 }

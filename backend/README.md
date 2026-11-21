@@ -106,6 +106,8 @@ npm run dev
 | POST | `/experiments/{id}/report` | multipart `file`, `targetMenuCode`로 CSV·단일 시트 XLSX 비교 |
 | GET | `/experiments/{id}/report`, `/experiments/{id}/sample.csv` | 영구 보고서 조회(현 DDL에서는 404), 현재 가게·기간에 맞춘 합성 CSV |
 | GET | `/demo/forecast` | 가게별 유효 일매출에서 가장 최근 영업일 다음 날부터 7일. 완전한 저장 예측 회차 또는 4주 같은 요일 평균. 이력 부족은 `INSUFFICIENT_DATA`와 누락 날짜 |
+| GET | `/forecast/week` | 서비스 기준 내일부터 7일간의 가게별 예상 매출(원). 같은 회차의 7일 저장 예측을 우선하고, 없으면 날짜별로 최근 4주 같은 요일의 매출을 평균한다. 필요한 영업일이 빠진 날짜의 `expected`는 `null`이다. |
+| GET | `/weather/week` | 같은 7일 중 `external_daily_features`에 예보로 저장한 날짜의 평균기온(°C)과 강수량(mm). 날짜별 공통 자료로, 가게별 관측소 구분은 없다. |
 | GET | `/cases` | 가상으로 구성한 동네 사례 6개 |
 | GET | `/chats`, `/chats/{id}` | 선택 가게의 저장된 대화 목록(최근 대화순), 대화 한 건의 메시지(말한 순서). 다른 가게의 ID는 404 |
 

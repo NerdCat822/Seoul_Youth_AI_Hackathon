@@ -70,12 +70,13 @@ function settings(session: AuthSession, data: AppData) {
   document.querySelector('[data-export]')!.addEventListener('click', () => exportRecords(data));
 }
 
-async function store(data: AppData) {
+async function store(data: AppData, signal: AbortSignal) {
   const form = document.querySelector<HTMLFormElement>('form[data-panel="info"]')!;
   form.querySelector<HTMLInputElement>('#st-name')!.value = data.overview.storeName;
   form.querySelector<HTMLInputElement>('#st-hours')!.value = '';
   for (const field of form.querySelectorAll<HTMLInputElement>('input')) field.readOnly = true;
-  const types = await request<{ upjongs: Upjong[] }>('/upjongs');
+  const types = await request<{ upjongs: Upjong[] }>('/upjongs', { signal });
+  signal.throwIfAborted();
   const [industries, modes] = form.querySelectorAll<HTMLElement>('[data-chip-group]');
   function chips(group: HTMLElement, names: string[], selected?: string) {
     group.removeAttribute('data-chip-group');
@@ -126,14 +127,19 @@ async function store(data: AppData) {
     }
     for (const panel of document.querySelectorAll<HTMLElement>('[data-panel]'))
       panel.hidden = panel.dataset.panel !== tab;
-    history.replaceState(null, '', tab === 'data' ? 'store.html?tab=data' : 'store.html');
+    history.replaceState(history.state, '', tab === 'data' ? 'store.html?tab=data' : 'store.html');
   }
   for (const button of document.querySelectorAll<HTMLElement>('[data-tab]'))
     button.onclick = () => select(button.dataset.tab!);
   select(new URLSearchParams(location.search).get('tab') === 'data' ? 'data' : 'info');
 }
 
-export async function mountAccountScreen(page: string, session: AuthSession, data: AppData) {
-  if (page === 'store') await store(data);
+export async function mountAccountScreen(
+  page: string,
+  session: AuthSession,
+  data: AppData,
+  signal: AbortSignal,
+) {
+  if (page === 'store') await store(data, signal);
   else settings(session, data);
 }

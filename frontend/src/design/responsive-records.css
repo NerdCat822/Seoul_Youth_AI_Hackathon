@@ -1,0 +1,259 @@
+.record-field-label,
+.calendar-agenda {
+  display: none;
+}
+
+/* The detail, photo and report panels have fixed desktop sidebars. */
+@media (max-width: 1023px) {
+  :is([data-nav='records'], [data-nav='calendar'], [data-nav='settings'], [data-nav='store']) main {
+    overflow-wrap: anywhere;
+  }
+
+  [data-screen='record'] [data-hero] + div,
+  [data-screen='result'] main > .container-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  [data-screen='record'] [data-hero] + div > section,
+  [data-screen='result'] main aside,
+  [data-screen='confirm'] [data-photo-card] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  [data-screen='result'] main aside {
+    position: static;
+  }
+
+  [data-screen='confirm'] [data-grid] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  :is([data-screen='calendar'], [data-screen='records'], [data-screen='record'])
+    .container-main
+    > .flex:first-child,
+  [data-screen='calendar'] .container-main > .flex:has([data-month]),
+  [data-screen='store'] [data-panel='data'] > .flex,
+  [data-screen='record'] [data-hero] {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.875rem;
+  }
+
+  [data-status-tabs] {
+    flex-wrap: nowrap;
+    margin-top: 1.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 0.25rem;
+  }
+
+  [data-status-tabs] [role='tab'] {
+    flex: none;
+  }
+
+  /* Keep all six record fields visible when the table becomes a stack of cards. */
+  [data-screen='records'] [data-table] {
+    display: block;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  [data-table] thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+  }
+
+  [data-table] tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  [data-table] tr[data-href] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    padding: 1rem;
+  }
+
+  [data-table] tr[data-href] > td {
+    border: 0;
+    padding: 0;
+  }
+
+  [data-table] td:nth-child(-n + 2) {
+    grid-column: 1 / -1;
+  }
+
+  [data-table] td:first-child {
+    font-size: 1rem;
+  }
+
+  .record-field-label,
+  .calendar-agenda a span {
+    display: block;
+    color: #6a7282;
+    font-size: 0.8125rem;
+  }
+
+  [data-screen='calendar'] .flex:has(> [data-month]) {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  [data-screen='calendar'] [data-month] {
+    min-width: 0;
+    font-size: 1.0625rem;
+  }
+
+  [data-screen='calendar'] [data-today] {
+    margin-left: auto;
+  }
+
+  [data-weekdays] > span {
+    padding: 0.5rem 0;
+    text-align: center;
+  }
+
+  [data-screen='calendar'] [data-grid] > div {
+    min-width: 0;
+    min-height: 3.75rem;
+    padding: 0.1875rem;
+  }
+
+  [data-screen='calendar'] [data-grid] a {
+    padding: 0.125rem;
+    font-size: 0.75rem;
+  }
+
+  .calendar-agenda {
+    display: block;
+    margin-top: 1.5rem;
+  }
+
+  .calendar-agenda li + li {
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .calendar-agenda a {
+    display: block;
+    padding-block: 0.75rem;
+  }
+
+  [data-screen='record'] .flex:has(> [data-title]),
+  [data-screen='record'] [data-hero] > .flex,
+  [data-screen='result'] header .flex,
+  [data-screen='confirm'] .flex:has(> [data-save]) {
+    flex-wrap: wrap;
+  }
+
+  [data-screen='record'] .flex:has(> [data-edit-link]) {
+    align-self: flex-end;
+  }
+
+  [data-screen='record'] [data-hero],
+  [data-screen='record-edit'] form > .border,
+  [data-screen='settings'] main .card,
+  [data-screen='store'] [data-panel='info'] {
+    padding: 1rem;
+  }
+
+  [data-kv] > div,
+  [data-screen='upload'] dl > div {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    gap: 0.25rem 0.5rem;
+  }
+
+  [data-kv] dd,
+  [data-screen='upload'] dl dd {
+    grid-column: 2;
+  }
+
+  [data-screen='record-edit'] [data-compare] .chip {
+    height: auto;
+    min-height: 2rem;
+    white-space: normal;
+  }
+
+  [data-screen='record-edit'] .grid:has(#f-start),
+  [data-screen='result'] [data-stats],
+  [data-screen='store'] [data-panel='data'] .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :is([data-screen='upload'], [data-screen='confirm']) .stepper {
+    justify-content: space-between;
+    gap: 0.25rem;
+  }
+
+  :is([data-screen='upload'], [data-screen='confirm']) .stepper .step {
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+  }
+
+  :is([data-screen='upload'], [data-screen='confirm']) .stepper .bar {
+    flex: 1;
+    min-width: 0;
+    max-width: 2rem;
+  }
+
+  [data-screen='confirm'] .flex:has(> [data-save]) {
+    gap: 0.5rem;
+  }
+
+  [data-screen='result'] header dl {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  [data-screen='result'] header dl > span {
+    display: none;
+  }
+
+  [data-screen='result'] header dl > div {
+    align-items: baseline;
+  }
+
+  [data-screen='result'] [data-yaxis],
+  [data-screen='result'] [data-bars] {
+    height: 12rem;
+  }
+
+  [data-screen='settings'] dl > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem 0.75rem;
+  }
+
+  [data-screen='settings'] dt {
+    width: auto;
+  }
+
+  [data-screen='settings'] dd {
+    grid-column: 1 / -1;
+  }
+
+  [data-screen='settings'] dl button {
+    grid-area: 1 / 2;
+  }
+
+  [data-screen='settings'] #se-pw {
+    min-width: 0;
+  }
+
+  [data-screen='store'] .table:has(td:only-child[colspan]) thead {
+    display: none;
+  }
+}

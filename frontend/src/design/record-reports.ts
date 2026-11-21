@@ -2,6 +2,7 @@ import { API_BASE, ApiError, compareSales, getSession, request } from '../api';
 import { addDays, formatDate } from '../lib/dates';
 import type { AppData, Experiment, SalesReport } from '../types';
 import { daysBetween, el, notice, recordUrl, ui } from './record-ui';
+import { navigateTo } from './screen-router';
 
 const fmt = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 });
 const uploadResultKey = 'trylog.design.uploadResult';
@@ -15,7 +16,7 @@ function period(start: string, end: string) {
   return formatDate(start) + ' ~ ' + formatDate(end);
 }
 
-function upload(r: Experiment, data: AppData) {
+function upload(r: Experiment, data: AppData, signal: AbortSignal) {
   const { esc, icon, toast } = ui();
   el('main h1 + p').textContent = r.title + ' · 결과 확인일 ' + formatDate(r.checkDate, true);
   const before = addDays(r.startDate, -14);
@@ -67,7 +68,7 @@ function upload(r: Experiment, data: AppData) {
   };
   database.onclick = () => {
     const menu = chosenMenu();
-    if (menu) location.assign(recordUrl('result', r.id, { source: 'db', targetMenuCode: menu }));
+    if (menu) navigateTo(recordUrl('result', r.id, { source: 'db', targetMenuCode: menu }));
   };
   el('[data-sample]').onclick = () => {
     if (data.menus.length < 2) {
@@ -187,17 +188,19 @@ function upload(r: Experiment, data: AppData) {
     message.textContent = '';
     try {
       // Keep only the computed summary for the transition; remove it when the result screen reads it.
-      const owner = await getSession();
+      const owner = await getSession(signal);
       if (!owner.authenticated || owner.storeId !== r.storeId)
         throw new Error('다시 로그인해 주세요.');
       const report = await compareSales(r.id, file, menu);
+      if (signal.aborted) return;
       const ticket = crypto.randomUUID();
       sessionStorage.setItem(
         uploadResultKey,
         JSON.stringify({ id: r.id, loginId: owner.loginId, storeId: r.storeId, ticket, report }),
       );
-      location.assign(recordUrl('result', r.id, { source: 'upload', ticket }));
+      navigateTo(recordUrl('result', r.id, { source: 'upload', ticket }));
     } catch (error) {
+      if (signal.aborted) return;
       message.textContent = errorMessage(error);
       toast(message.textContent);
     } finally {
@@ -209,11 +212,12 @@ function upload(r: Experiment, data: AppData) {
   showStep(1);
 }
 
-async function loadReport(record: Experiment) {
+async function loadReport(record: Experiment, signal: AbortSignal) {
   const query = new URLSearchParams(location.search);
   if (query.get('source') === 'upload') {
     const saved = JSON.parse(sessionStorage.getItem(uploadResultKey) || 'null');
-    const owner = await getSession();
+    const owner = await getSession(signal);
+    signal.throwIfAborted();
     if (
       !saved ||
       !owner.authenticated ||
@@ -228,10 +232,12 @@ async function loadReport(record: Experiment) {
     return saved.report as SalesReport;
   }
   const path = '/experiments/' + encodeURIComponent(record.id) + '/report';
-  if (record.status === 'COMPLETED' && !query.get('source')) return request<SalesReport>(path);
+  if (record.status === 'COMPLETED' && !query.get('source'))
+    return request<SalesReport>(path, { signal });
   const menu = query.get('targetMenuCode') || record.targetMenuCode;
   return request<SalesReport>(
     path + '/preview' + (menu ? '?' + new URLSearchParams({ targetMenuCode: menu }) : ''),
+    { signal },
   );
 }
 
@@ -266,21 +272,23 @@ function nextOptions(r: Experiment) {
   el('[data-next]').onsubmit = (event) => {
     event.preventDefault();
     if (selected === 'more')
-      location.assign('ai.html?' + new URLSearchParams({ start: 'next', id: r.id }));
-    else if (selected === 'later') location.assign('records.html');
+      navigateTo('ai.html?' + new URLSearchParams({ start: 'next', id: r.id }));
+    else if (selected === 'later') navigateTo('records.html');
     else toast('후속 결정 저장은 아직 지원하지 않아요.');
   };
   render();
 }
 
-async function result(r: Experiment, data: AppData) {
+async function result(r: Experiment, data: AppData, signal: AbortSignal) {
   let report: SalesReport;
   try {
-    report = await loadReport(r);
+    report = await loadReport(r, signal);
   } catch (error) {
+    if (signal.aborted) return;
     notice(errorMessage(error), recordUrl('upload', r.id), '판매 자료 다시 선택');
     return;
   }
+  signal.throwIfAborted();
   const { before, after } = report;
   const { esc } = ui();
   const name =
@@ -350,9 +358,9 @@ async function result(r: Experiment, data: AppData) {
   nextOptions(r);
 }
 
-export async function mountReport(page: string, r: Experiment, data: AppData) {
-  if (page === 'upload') return upload(r, data);
-  if (page === 'result') return result(r, data);
+export async function mountReport(page: string, r: Experiment, data: AppData, signal: AbortSignal) {
+  if (page === 'upload') return upload(r, data, signal);
+  if (page === 'result') return result(r, data, signal);
 }
 
 export function mountConfirmation(r?: Experiment) {

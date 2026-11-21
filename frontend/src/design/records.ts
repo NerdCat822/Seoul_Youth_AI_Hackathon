@@ -3,6 +3,7 @@ import { actions } from '../lib/labels';
 import type { AppData, Experiment } from '../types';
 import { daysBetween, el, notice, recordUrl, ui } from './record-ui';
 import { mountConfirmation, mountReport } from './record-reports';
+import { navigateTo } from './screen-router';
 
 const keyByStatus = {
   READY: 'check',
@@ -34,6 +35,7 @@ function targetName(record: Experiment, data: AppData) {
 
 function records(data: AppData) {
   const { esc } = ui();
+  const columns = Array.from(el('[data-table]').querySelectorAll('th')).slice(2);
   const filter = new URLSearchParams(location.search).get('status');
   let current: Status = filter && Object.hasOwn(labels, filter) ? (filter as Status) : 'all';
   const render = () => {
@@ -53,7 +55,17 @@ function records(data: AppData) {
       .map(
         (r) => `<tr tabindex="0" data-href="${esc(destination(r))}">
       <td class="text-[15px] font-semibold text-heading">${esc(r.title)}</td><td>${badge(r)}</td>
-      <td>${formatDate(r.startDate)}</td><td>${formatDate(r.endDate)}</td><td>${formatDate(r.checkDate)}</td><td>${esc(targetName(r, data))}</td></tr>`,
+      ${[
+        formatDate(r.startDate),
+        formatDate(r.endDate),
+        formatDate(r.checkDate),
+        targetName(r, data),
+      ]
+        .map(
+          (value, index) =>
+            `<td><span class="record-field-label" aria-hidden="true">${esc(columns[index].textContent)}</span>${esc(value)}</td>`,
+        )
+        .join('')}</tr>`,
       )
       .join('');
     el('[data-table]').hidden = !filtered.length;
@@ -64,7 +76,7 @@ function records(data: AppData) {
     if (code && Object.hasOwn(labels, code)) {
       current = code as Status;
       history.replaceState(
-        null,
+        history.state,
         '',
         code === 'all' ? 'records.html' : 'records.html?status=' + code,
       );
@@ -74,7 +86,7 @@ function records(data: AppData) {
   };
   const open = (event: Event) => {
     const url = (event.target as HTMLElement).closest<HTMLElement>('tr[data-href]')?.dataset.href;
-    if (url) location.assign(url);
+    if (url) navigateTo(url);
   };
   el('[data-table]').onclick = open;
   el('[data-table]').onkeydown = (event) => {
@@ -88,6 +100,9 @@ function calendar(data: AppData) {
   const today = data.overview.today;
   let month = today.slice(0, 7);
   const colors = ['#155dfc', '#0092b8', '#8e51ff', '#e60076', '#6a7282'];
+  const agenda = document.createElement('section');
+  agenda.className = 'calendar-agenda';
+  el('[data-grid]').parentElement!.after(agenda);
   el('[data-weekdays]').innerHTML = [...'일월화수목금토']
     .map((day) => `<span class="px-3 py-3">${day}</span>`)
     .join('');
@@ -121,6 +136,21 @@ function calendar(data: AppData) {
       },
     );
     el('[data-grid]').innerHTML = cells.join('');
+    const last = addDays(first, length - 1);
+    const items = data.experiments.filter(
+      (record) =>
+        (record.startDate <= last && record.endDate >= first) ||
+        (record.checkDate >= first && record.checkDate <= last),
+    );
+    agenda.hidden = items.length === 0;
+    agenda.innerHTML = `<h2 class="section-title">${esc(formatMonth(month))} 기록</h2><ul>${items
+      .map(
+        (record) => `<li><a href="${esc(destination(record))}">
+        <strong>${esc(record.title)}</strong>
+        <span>${formatDate(record.startDate)} ~ ${formatDate(record.endDate)} · 결과 확인 ${formatDate(record.checkDate)}</span>
+      </a></li>`,
+      )
+      .join('')}</ul>`;
   }
   document.querySelectorAll<HTMLElement>('[data-move]').forEach((button) => {
     const delta = Number(button.dataset.move);
@@ -255,7 +285,7 @@ function edit(r: Experiment, data: AppData) {
   });
 }
 
-export async function mountRecords(page: string, data: AppData) {
+export async function mountRecords(page: string, data: AppData, signal: AbortSignal) {
   if (page === 'records') return records(data);
   if (page === 'calendar') return calendar(data);
   const id = new URLSearchParams(location.search).get('id');
@@ -282,12 +312,12 @@ export async function mountRecords(page: string, data: AppData) {
       event.preventDefault();
       const selected = el<HTMLSelectElement>('#choose-record').value;
       if (data.experiments.some((item) => item.id === selected))
-        location.assign(recordUrl(page, selected));
+        navigateTo(recordUrl(page, selected));
     };
     return;
   }
   if (!record) return notice('이 기록을 찾을 수 없어요. 내 기록에서 다시 선택해 주세요.');
   if (page === 'record') return detail(record, data);
   if (page === 'record-edit') return edit(record, data);
-  await mountReport(page, record, data);
+  await mountReport(page, record, data, signal);
 }

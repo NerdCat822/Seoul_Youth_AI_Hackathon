@@ -18,18 +18,30 @@ public class ForecastRepository {
         this.jdbc = jdbc;
     }
 
-    NavigableMap<LocalDate, Long> history(int store, LocalDate today) {
+    NavigableMap<LocalDate, Long> history(int store, LocalDate first, LocalDate last) {
         var history = new TreeMap<LocalDate, Long>();
         jdbc.query("""
                 SELECT sales_date, daily_sales
                 FROM seoul_youth_ai_hackathon.v_daily_sales_mart
-                WHERE store_id = ? AND sales_date <= ? AND is_forecast IS FALSE
-                  AND is_missing_or_closed IS FALSE AND daily_sales >= 0
+                WHERE store_id = ?
+                  AND sales_date BETWEEN COALESCE(CAST(? AS date), '-infinity'::date) AND ?
+                  AND is_forecast IS FALSE AND is_missing_or_closed IS FALSE AND daily_sales >= 0
                 ORDER BY sales_date
                 """, rs -> {
                     history.put(rs.getObject("sales_date", LocalDate.class), rs.getLong("daily_sales"));
-                }, store, today);
+                }, store, first, last);
         return history;
+    }
+
+    List<ForecastController.WeatherDay> weather(LocalDate first, LocalDate last) {
+        return jdbc.query("""
+                SELECT feature_date, avg_temp, precipitation
+                FROM seoul_youth_ai_hackathon.external_daily_features
+                WHERE feature_date BETWEEN ? AND ? AND is_forecast IS TRUE
+                ORDER BY feature_date
+                """, (rs, row) -> new ForecastController.WeatherDay(
+                rs.getObject("feature_date", LocalDate.class), rs.getObject("avg_temp", Double.class),
+                rs.getObject("precipitation", Double.class)), first, last);
     }
 
     List<StoredDay> predictions(int store, LocalDate through) {
