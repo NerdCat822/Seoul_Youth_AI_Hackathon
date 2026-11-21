@@ -5,6 +5,7 @@ import { VoiceInput } from '../components/VoiceInput';
 import { addDays, formatDate } from '../lib/dates';
 import { CHAT_ENABLED } from '../lib/features';
 import { difficulties, statuses } from '../lib/labels';
+import { onSpeakingChange, speak, stopSpeaking, unlockAudio } from '../lib/speech';
 import type {
   AgentChatResponse,
   AppData,
@@ -204,7 +205,19 @@ export async function mountChat(
         <dd class="text-[15px] text-sub">없음</dd><button type="button" disabled title="대화 초안에 파일 첨부를 지원하지 않아요." class="btn btn-sm bg-brand-weak text-brand-text">${icon('add', 16)} 파일 추가</button>
       </div></dl>${confirm ? confirmActions() : ''}</section>`;
   }
-  async function send(text: string) {
+  // 말로 한 질문. 녹음이 끝나 마이크가 놓이면 바로 보내고, 답은 소리로 읽는다.
+  let spoken: string | null = null;
+  const speaking = document.createElement('div');
+  speaking.className = 'voice-feedback design-speaking';
+  speaking.hidden = true;
+  speaking.innerHTML =
+    '<span role="status">답을 소리로 읽고 있어요.</span><button type="button">그만 듣기</button>';
+  speaking.querySelector('button')!.onclick = () => stopSpeaking();
+  onSpeakingChange((value) => {
+    speaking.hidden = !value;
+  });
+  async function send(text: string, voice = false) {
+    stopSpeaking();
     if (!data) {
       location.assign('login.html');
       return;
@@ -245,6 +258,11 @@ export async function mountChat(
       if (reply.experiment) actions += savedCard(reply.experiment);
       const content = [reply.reply, ...reply.notices].filter(Boolean).join('\n');
       currentActions = append('ASSISTANT', content, actions);
+      if (voice) {
+        // 카드는 눈으로만 보이므로 제안 제목을 번호와 함께 읽는다.
+        const picks = cards.map((card, index) => `${index + 1}번, ${card.title}.`);
+        speak([content, ...picks].join('\n')).catch(() => undefined);
+      }
       const payload =
         draft || cards.length || options.length || reply.experiment
           ? { cards, options, draft, experimentId: reply.experiment?.id }
@@ -268,6 +286,7 @@ export async function mountChat(
     } catch (error) {
       waiting.remove();
       append('ASSISTANT', errorMessage(error));
+      if (voice) speak(errorMessage(error)).catch(() => undefined);
       currentActions
         ?.querySelectorAll<HTMLButtonElement>('[data-say], [data-revise]')
         .forEach((b) => {
@@ -333,20 +352,28 @@ export async function mountChat(
         microphoneIcon,
         onBusyChange(value) {
           voiceBusy = value;
+          if (value) {
+            // 마이크를 누르면 읽던 답을 멈춘다. 누른 순간에 소리 재생 권한도 얻어 둔다(휴대폰 브라우저).
+            stopSpeaking();
+            unlockAudio();
+          }
           updateSend();
+          if (!value && spoken !== null) {
+            // 말이 끝나 녹음이 마치면 바로 보낸다. 입력창에 써 둔 글이 있으면 앞에 붙인다.
+            const message = [input.value.trim(), spoken].filter(Boolean).join(' ');
+            spoken = null;
+            void send(message, true);
+          }
         },
         onTranscript(text) {
-          input.value += (input.value && !/\s$/.test(input.value) ? ' ' : '') + text;
-          if (Array.from(input.value.trim()).length > 500)
-            toast('보낼 내용을 500자 이내로 줄여 주세요.');
-          updateSend();
-          input.focus();
+          spoken = text;
         },
       }),
     );
   }
   function mountVoice(open: boolean) {
     if (!data) return;
+    if (!open) stopSpeaking();
     if (open && !voiceRoot) {
       voiceRoot = createRoot(micMount);
       updateVoice();
@@ -355,7 +382,10 @@ export async function mountChat(
       voiceRoot = null;
     }
   }
-  if (data) mic.replaceWith(micMount);
+  if (data) {
+    mic.replaceWith(micMount);
+    form.append(speaking);
+  }
   panel.querySelectorAll<HTMLButtonElement>('[data-mic]').forEach((button) => {
     button.onclick = () => {
       if (!data) location.assign('login.html');
