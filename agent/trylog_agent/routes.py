@@ -7,16 +7,17 @@ import uuid
 from collections import OrderedDict
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi.responses import Response
 from fastapi.concurrency import run_in_threadpool
 from langgraph.types import Command
 
-from . import llm
+from . import llm, memory, reply as replies
 from .graph.build import chat_graph, draft_graph, explain_graph
 from .graph.nodes import get_menus
 from .schemas import (ApiError, ChatRequest, ChatResponse, DraftRequest, DraftResponse, ExplainResponse, HealthResponse,
-                      SttResponse)
+                      SttResponse, TtsRequest)
 from .settings import get_settings
-from .tools import login, ml, rules, stt
+from .tools import login, ml, rules, stt, tts
 from .tools.spring import SpringError, SpringNotFound, get_spring
 
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
@@ -24,7 +25,6 @@ router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
 TEXT_MAX = 500
 MAX_THREADS = 300
 _threads: "OrderedDict[str, threading.Lock]" = OrderedDict()
-_thread_stores: dict[str, int] = {}   # 대화가 어느 가게의 것인지. 다른 가게는 이어 쓸 수 없다.
 _threads_guard = threading.Lock()
 
 
@@ -75,22 +75,27 @@ async def require_login(request: Request) -> None:
 
 
 def _thread_lock(thread_id: str | None) -> tuple[str, threading.Lock]:
-    """아는 대화면 그 대화의 잠금을, 없거나 모르는 값이거나 다른 가게의 대화면 새 대화를 돌려준다."""
+    """이어 갈 대화와 그 잠금을 돌려준다. 모르는 대화이거나 다른 가게의 대화면 새 대화를 연다.
+
+    대화가 어느 가게의 것인지는 memory(Postgres 또는 메모리)에 남긴다. 잠금은 이 프로세스 안에서만 쓴다.
+    """
     store_id = login.current_store_id()
+    try:
+        conversations = memory.conversations()
+        known = bool(thread_id) and conversations.owner(thread_id) == store_id
+        if not known:
+            thread_id = str(uuid.uuid4())
+            conversations.claim(thread_id, store_id)
+    except memory.MemoryUnavailable:
+        raise ApiError(503, "MEMORY_UNAVAILABLE", "대화를 이어 갈 저장소에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.") from None
+    if not known:
+        memory.claimed()
     with _threads_guard:
-        if thread_id and thread_id in _threads and _thread_stores.get(thread_id) == store_id:
-            _threads.move_to_end(thread_id)
-            return thread_id, _threads[thread_id]
-        new_id = str(uuid.uuid4())
-        _threads[new_id] = threading.Lock()
-        _thread_stores[new_id] = store_id
+        lock = _threads.pop(thread_id, None) or threading.Lock()
+        _threads[thread_id] = lock
         while len(_threads) > MAX_THREADS:
-            old_id, _ = _threads.popitem(last=False)
-            _thread_stores.pop(old_id, None)
-            saver = chat_graph().checkpointer
-            if hasattr(saver, "delete_thread"):
-                saver.delete_thread(old_id)
-        return new_id, _threads[new_id]
+            _threads.popitem(last=False)     # 잠금만 잊는다. 대화 상태는 memory 에 남아 있다
+        return thread_id, lock
 
 
 @router.get("/health", response_model=HealthResponse, dependencies=[Depends(login_context)])
@@ -109,6 +114,8 @@ def health() -> dict:
         "springToday": spring_today, "mlReady": ml.ml_ready(), "mlBaseToday": ml_today,
         "dateMatch": bool(spring_today) and spring_today == ml_today,
         "sttReady": stt.is_ready(), "sttModel": settings.stt_model,
+        "conversationStore": memory.kind(),
+        "ttsReady": tts.is_ready(), "ttsModel": settings.tts_model, "ttsVoice": settings.tts_voice,
     }
 
 
@@ -127,6 +134,18 @@ async def speech_to_text(audio: UploadFile = File(...)) -> dict:
     except stt.SttError as error:
         raise ApiError(error.status, error.code, error.message) from None
     return {"text": result.text, "model": result.model, "elapsedMs": result.elapsed_ms}
+
+
+@router.post("/tts", dependencies=[Depends(require_login)], response_class=Response,
+             responses={200: {"content": {"audio/mpeg": {}}, "description": "읽은 소리(mp3)"}})
+async def text_to_speech(body: TtsRequest) -> Response:
+    """글을 소리(mp3)로 바꾼다. 로그인한 가게만 쓸 수 있다(OpenAI 요금이 든다)."""
+    try:
+        speech = await run_in_threadpool(tts.synthesize, body.text)
+    except tts.TtsError as error:
+        raise ApiError(error.status, error.code, error.message) from None
+    return Response(content=speech.audio, media_type=speech.media_type,
+                    headers={"Cache-Control": "no-store", "X-Elapsed-Ms": str(speech.elapsed_ms)})
 
 
 @router.post("/draft", response_model=DraftResponse, dependencies=[Depends(require_login)])
@@ -157,18 +176,29 @@ def chat(body: ChatRequest) -> dict:
             result = graph.invoke(Command(resume=message), config)
         elif values.get("status") == "SAVED" and rules.is_save_word(message):
             # 이미 저장한 대화에서 다시 '저장'이라고 하면 Spring을 다시 부르지 않는다.
-            return _response(thread_id, "SAVED", "이미 저장했어요.", values)
+            return _answer(thread_id, message, config, "SAVED", "이미 저장했어요.", values)
         elif rules.is_save_word(message) or rules.is_cancel_word(message):
-            return _response(thread_id, "GUIDE", "저장할 초안이 아직 없어요. 먼저 해본 일을 한 문장으로 말씀해 주세요.",
-                             {"source": "RULES"})
+            return _answer(thread_id, message, config, "GUIDE",
+                           "저장할 초안이 아직 없어요. 먼저 해본 일을 한 문장으로 말씀해 주세요.", {"source": "RULES"})
         else:
             result = graph.invoke({"text": message}, config)
         values = graph.get_state(config).values or {}
     interrupts = result.get("__interrupt__") or []
     if interrupts:
         payload = interrupts[0].value or {}
-        return _response(thread_id, payload.get("status", "ASKING"), payload.get("reply") or "", values)
-    return _response(thread_id, values.get("status") or "GUIDE", values.get("reply") or "", values)
+        return _answer(thread_id, message, config, payload.get("status", "ASKING"), payload.get("reply") or "", values)
+    return _answer(thread_id, message, config, values.get("status") or "GUIDE", values.get("reply") or "", values)
+
+
+def _answer(thread_id: str, message: str, config: dict, status: str, base: str, values: dict) -> dict:
+    """그래프가 정한 단계와 기본 문장으로, LLM이 사장님께 드릴 답 문장을 쓴다."""
+    deadline = config["configurable"]["deadline"]
+    text, source = replies.write(status, base, message, values, thread_id, max(0.0, deadline - time.monotonic()))
+    replies.remember(thread_id, message, text)
+    response = _response(thread_id, status, text, values)
+    if source == "LLM":
+        response["source"] = "LLM"
+    return response
 
 
 def _response(thread_id: str, status: str, reply: str, values: dict) -> dict:

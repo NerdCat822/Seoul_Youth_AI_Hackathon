@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import llm
+from . import llm, memory
 from .graph.nodes import resolve_today
 from .routes import router
 from .schemas import ApiError
@@ -36,7 +36,13 @@ async def lifespan(_: FastAPI):
     # 첫 LLM 호출이 느리므로 서버가 뜰 때 뒤에서 미리 불러 둔다. TRYLOG_LLM_WARMUP=0이면 건너뛴다.
     if get_settings().llm_warmup and llm.is_ready():
         threading.Thread(target=lambda: llm.warm_up(resolve_today()[0]), daemon=True).start()
+    # 대화 저장소(Postgres 또는 메모리)를 미리 연다. 실패해도 서버는 뜨고, 대화 요청 때 다시 시도한다.
+    try:
+        memory.init()
+    except memory.MemoryUnavailable:
+        pass
     yield
+    memory.close()
 
 
 def create_app() -> FastAPI:
