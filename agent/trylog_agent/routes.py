@@ -11,7 +11,7 @@ from fastapi.responses import Response
 from fastapi.concurrency import run_in_threadpool
 from langgraph.types import Command
 
-from . import llm
+from . import llm, reply as replies
 from .graph.build import chat_graph, draft_graph, explain_graph
 from .graph.nodes import get_menus
 from .schemas import (ApiError, ChatRequest, ChatResponse, DraftRequest, DraftResponse, ExplainResponse, HealthResponse,
@@ -171,18 +171,29 @@ def chat(body: ChatRequest) -> dict:
             result = graph.invoke(Command(resume=message), config)
         elif values.get("status") == "SAVED" and rules.is_save_word(message):
             # 이미 저장한 대화에서 다시 '저장'이라고 하면 Spring을 다시 부르지 않는다.
-            return _response(thread_id, "SAVED", "이미 저장했어요.", values)
+            return _answer(thread_id, message, config, "SAVED", "이미 저장했어요.", values)
         elif rules.is_save_word(message) or rules.is_cancel_word(message):
-            return _response(thread_id, "GUIDE", "저장할 초안이 아직 없어요. 먼저 해본 일을 한 문장으로 말씀해 주세요.",
-                             {"source": "RULES"})
+            return _answer(thread_id, message, config, "GUIDE",
+                           "저장할 초안이 아직 없어요. 먼저 해본 일을 한 문장으로 말씀해 주세요.", {"source": "RULES"})
         else:
             result = graph.invoke({"text": message}, config)
         values = graph.get_state(config).values or {}
     interrupts = result.get("__interrupt__") or []
     if interrupts:
         payload = interrupts[0].value or {}
-        return _response(thread_id, payload.get("status", "ASKING"), payload.get("reply") or "", values)
-    return _response(thread_id, values.get("status") or "GUIDE", values.get("reply") or "", values)
+        return _answer(thread_id, message, config, payload.get("status", "ASKING"), payload.get("reply") or "", values)
+    return _answer(thread_id, message, config, values.get("status") or "GUIDE", values.get("reply") or "", values)
+
+
+def _answer(thread_id: str, message: str, config: dict, status: str, base: str, values: dict) -> dict:
+    """그래프가 정한 단계와 기본 문장으로, LLM이 사장님께 드릴 답 문장을 쓴다."""
+    deadline = config["configurable"]["deadline"]
+    text, source = replies.write(status, base, message, values, thread_id, max(0.0, deadline - time.monotonic()))
+    replies.remember(thread_id, message, text)
+    response = _response(thread_id, status, text, values)
+    if source == "LLM":
+        response["source"] = "LLM"
+    return response
 
 
 def _response(thread_id: str, status: str, reply: str, values: dict) -> dict:
