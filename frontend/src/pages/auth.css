@@ -110,26 +110,9 @@
 .auth-disabled p {
   margin-bottom: 12px;
 }
-.selected-address {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px 12px;
-  padding: 12px;
-  color: var(--navy);
-  background: #eef7f1;
-  border-radius: 8px;
-  overflow-wrap: anywhere;
-}
 .auth-field-label {
   font-size: 14px;
   font-weight: 650;
-}
-.selected-address small {
-  display: block;
-  font-size: 12px;
-  color: var(--muted);
 }
 .required-mark {
   color: #b82d34;
@@ -193,7 +176,6 @@
   overflow: hidden;
   background: white;
 }
-.address-change,
 .logout-button {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -206,8 +188,113 @@
 .postcode-frame {
   height: 400px;
 }
-.form-field[aria-invalid='true'] .address-search {
-  border-color: #b94747;
+.address-lookup {
+  min-width: 0;
+}
+.address-input-wrap {
+  position: relative;
+}
+.address-input-wrap > svg {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  transform: translateY(-50%);
+  color: #65766f;
+  pointer-events: none;
+}
+.form-field .address-input-wrap input {
+  padding-inline: 42px;
+  font-size: 16px;
+}
+.address-input-wrap input:focus {
+  outline: 2px solid #70bea1;
+  outline-offset: 0;
+  border-color: #70bea1;
+}
+.address-clear {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 23px;
+}
+.address-options {
+  list-style: none;
+  padding: 4px 0;
+  margin: 5px 0 0;
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 6px 16px #183d2910;
+}
+.address-options li {
+  padding: 10px 13px;
+  color: var(--navy);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.address-options li:hover,
+.address-options li[aria-selected='true'] {
+  background: #eef6f1;
+}
+.address-options strong,
+.address-options small {
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.address-options small,
+.address-feedback {
+  color: var(--muted);
+  font-size: 13px;
+}
+.address-feedback:not(:empty) {
+  margin-top: 6px;
+}
+.address-options mark {
+  background: transparent;
+  color: #075e43;
+  font-weight: 700;
+}
+.address-more {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #075e43;
+  font-weight: 600;
+}
+.address-more:hover,
+.address-more:focus-visible {
+  background: #eef6f1;
+}
+.address-more[aria-disabled='true'] {
+  color: var(--muted);
+}
+.address-secondary {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 4px 0;
+  background: transparent;
+  border: 0;
+  color: #376652;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 13px;
+}
+.address-feedback .address-secondary {
+  margin-inline-start: 8px;
 }
 .address-message {
   padding: 16px;

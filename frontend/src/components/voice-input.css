@@ -1,0 +1,53 @@
+.chat-input-tools:has(.voice-actions) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+.chat-input-tools:has(.voice-actions) > :first-child {
+  justify-self: start;
+}
+.chat-input-tools:has(.voice-actions) > .chat-send {
+  grid-area: 1 / 3;
+}
+.voice-actions {
+  grid-area: 1 / 2;
+  display: flex;
+}
+.voice-actions .voice-finish {
+  display: inline-flex;
+  gap: 5px;
+  width: auto;
+  padding-inline: 11px;
+  border-radius: 999px;
+  border-color: #b25346;
+  color: #9a3024;
+  font-size: 13px;
+}
+.voice-square {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.voice-feedback {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--chat-body);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.voice-feedback[hidden] {
+  display: none;
+}
+.voice-feedback button {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+}

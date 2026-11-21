@@ -109,13 +109,12 @@ export function AuthPage({
   onAuthenticated: (session: AuthSession) => void;
 }) {
   const [address, setAddress] = useState<StoreAddress | null>(null);
-  const [focusAddressSearch, setFocusAddressSearch] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const onSelected = useCallback((selected: StoreAddress) => {
+  const onSelected = useCallback((selected: StoreAddress | null) => {
     setAddress(selected);
     setMessage('');
     setErrors((current) => ({
@@ -274,39 +273,16 @@ export function AuthPage({
                     error={errors.storeName}
                   />
                   <UpjongField error={errors.upjong} />
-                  <div
-                    className="form-field"
-                    role="group"
-                    aria-labelledby="store-address-label"
-                    aria-invalid={!!addressError}
-                    aria-describedby={addressError ? 'address-error' : undefined}
-                    tabIndex={-1}
-                  >
-                    <span className="auth-field-label" id="store-address-label">
+                  <div className="form-field">
+                    <label htmlFor="auth-address">
                       가게 주소
                       <RequiredMark />
-                      <span className="visually-hidden"> (필수)</span>
-                    </span>
-                    {address ? (
-                      <div className="selected-address">
-                        <p aria-live="polite">
-                          <small>우편번호 {address.postalCode}</small>
-                          {address.address}
-                        </p>
-                        <button
-                          type="button"
-                          className="address-change"
-                          onClick={() => {
-                            setFocusAddressSearch(true);
-                            setAddress(null);
-                          }}
-                        >
-                          주소 다시 검색
-                        </button>
-                      </div>
-                    ) : (
-                      <AddressSearch onSelected={onSelected} focusOnOpen={focusAddressSearch} />
-                    )}
+                    </label>
+                    <AddressSearch
+                      selected={address}
+                      onSelected={onSelected}
+                      error={addressError}
+                    />
                     {addressError && (
                       <span className="field-error" id="address-error">
                         {addressError}

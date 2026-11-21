@@ -32,7 +32,11 @@ export class ApiError extends Error {
 // 배포 경로(Vite base)를 따라간다. 기본값 '/'에서는 '/api/v1', '/try-log/'로 빌드하면 '/try-log/api/v1'.
 export const API_BASE = `${import.meta.env.BASE_URL}api/v1`;
 
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs = 10000,
+): Promise<T> {
   let response: Response;
   const token = csrfToken;
   const headers = new Headers(options.headers);
@@ -48,8 +52,8 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       cache: 'no-store',
       headers,
       signal: options.signal
-        ? AbortSignal.any([options.signal, AbortSignal.timeout(10000)])
-        : AbortSignal.timeout(10000),
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(timeoutMs)])
+        : AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
@@ -126,6 +130,17 @@ export function sendChat(threadId: string | null, message: string): Promise<Agen
     method: 'POST',
     body: JSON.stringify({ threadId, message }),
   });
+}
+
+export function transcribeAudio(audio: Blob, signal: AbortSignal) {
+  const form = new FormData();
+  form.append('audio', audio, 'voice');
+  // The agent allows 20 seconds for transcription, in addition to the upload and session check.
+  return request<{ text: string; model: string; elapsedMs: number }>(
+    '/agent/stt',
+    { method: 'POST', body: form, signal },
+    45000,
+  );
 }
 
 /** 주고받은 말을 대화 내역(DB)에 남긴다. */

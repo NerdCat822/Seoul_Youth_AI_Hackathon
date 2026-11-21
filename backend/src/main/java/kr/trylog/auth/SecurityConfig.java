@@ -50,7 +50,7 @@ public class SecurityConfig {
             HttpSessionCsrfTokenRepository tokens, ObjectMapper mapper) throws Exception {
         return http
                 .authorizeHttpRequests(routes -> routes
-                        .requestMatchers(HttpMethod.GET, "/api/v1/upjongs").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/upjongs", "/api/v1/addresses/search").permitAll()
                         .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/api/v1/ready").permitAll()
                         .anyRequest().authenticated())
                 .securityContext(config -> config.securityContextRepository(sessions))

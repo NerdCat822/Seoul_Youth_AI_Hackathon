@@ -35,6 +35,7 @@ server:
     include-stacktrace: never
 
 trylog:
+  address-api-key: ${JUSO_API_KEY:}
   demo-date: ${TRYLOG_DEMO_DATE:}
   allow-writes: ${TRYLOG_ALLOW_WRITES:false}
   database-name: ${DB_NAME:hgkim_postgresql}

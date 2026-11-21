@@ -34,9 +34,11 @@ GROUP BY s.upjong;
 
 가입을 제공할 환경에서는 `TRYLOG_ALLOW_WRITES=true`로 서버를 실행한다. 앱 역할에는 스키마 USAGE, 서비스 조회 SELECT, `stores` INSERT와 가게 번호 시퀀스 USAGE 권한이 필요하다. 시도 등록도 제공하려면 `experiments` INSERT 권한이 필요하다. 운영에서는 HTTPS로 접속하고 TLS를 종료하는 프록시 뒤에서는 세션 쿠키에 `Secure`가 적용되도록 `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`를 설정한다.
 
-회원가입 화면의 **가게 주소** 검색창에 도로명이나 동 이름을 입력하면 검색창 아래에 카카오의 연관 검색어가 표시된다. 추천어를 고르거나 건물번호까지 입력해 검색한 뒤, 결과에서 가게의 도로명주소 또는 지번주소를 선택한다. 선택한 주소와 우편번호, 시도·시군구가 가입 정보에 반영된다. 가게 이름·업종·가게 주소·상세 주소는 필수 항목이며, 층·호수 등의 상세 주소는 직접 입력한다.
+회원가입 화면의 **가게 주소**에 동 이름, 도로명 또는 지번을 두 글자 이상 입력하면 도로명주소와 지번주소가 짝으로 표시된다. 예를 들어 `영등포구 여의동`을 입력하면 행정동이 여의동인 건물의 도로명주소와 법정동인 여의도동의 지번을 함께 볼 수 있다. **주소 더 보기**로 다음 10건을 펼칠 수 있다. 주소를 클릭하거나 방향키와 Enter로 선택하면 우편번호와 시도·시군구 코드가 가입 정보에 채워지고 상세 주소로 이동한다. 가게 이름·업종·가게 주소·상세 주소는 필수다.
 
-이 화면은 **카카오 우편번호서비스**의 공식 검색창을 가입 양식 안에 표시한다. 앱 생성·플랫폼 키·도메인 등록 없이 이용할 수 있다. 브라우저에서 `t1.kakaocdn.net`과 카카오 주소검색 화면에 접근할 수 있어야 한다. [카카오 우편번호서비스 가이드](https://postcode.map.kakao.com/guide)
+기본 검색은 키 없이 동작한다. 서버에 포함한 자료는 2026년 11월 9일 기준 서울 전역과 전주 여의동 일대의 도로명·지번 조합 525,312건이다. 자료를 갱신할 때는 우정사업본부에서 지역별 주소 DB ZIP을 받아 Python 3.11 이상으로 `python backend/ops/build-address-directory.py <ZIP경로>`를 실행한 뒤 서버를 다시 빌드한다. [우정사업본부 지역별 주소 DB](https://www.epost.go.kr/search/zipcode/areacdAddressDown.jsp)
+
+전국 주소도 같은 추천 목록에서 검색하려면 도로명주소 검색 API 승인키를 서버 환경 변수 `JUSO_API_KEY`에 주입한다. 별도 배포용 Compose 파일로 실행한다면 해당 파일의 `api.environment`에도 이 변수를 전달한다. 키 없이 전국 주소를 찾으려면 입력창 아래 **카카오 주소검색**을 누른다. 이때 카카오 우편번호서비스가 열린다. [행정안전부 도로명주소 검색 API](https://www.data.go.kr/data/15057017/openapi.do) · [카카오 우편번호서비스 가이드](https://postcode.map.kakao.com/guide)
 
 ## PostgreSQL 연결
 
@@ -47,6 +49,7 @@ GROUP BY s.upjong;
 | `DB_HOST`, `DB_PORT` | `localhost`, `5432` | PostgreSQL 서버에서 직접 실행할 때의 주소. 앱 컨테이너에서는 `postgres-db` 사용 |
 | `DB_NAME`, `DB_USER` | `hgkim_postgresql`, `nerdcat822` | DB와 접속 역할 |
 | `DB_PASSWORD` | 환경에서 주입 | 서버 프로세스가 사용할 비밀번호 |
+| `JUSO_API_KEY` | 선택 | 전국 도로명주소 검색 API의 서버용 승인키 |
 | `TRYLOG_DEMO_DATE` | 서울 현재 날짜 | 과거 시연일을 재현할 때만 지정 |
 | `TRYLOG_ALLOW_WRITES` | `false` | 가입·시도 등록 활성화. 로그인한 가게의 번호는 서버 세션에서 결정 |
 | `SERVER_PORT` | `7000` | Spring이 듣는 포트. 에이전트 서버(7500)가 이 주소로 Spring을 부른다 |
@@ -97,6 +100,7 @@ npm run dev
 | --- | --- | --- |
 | GET | `/auth/session` | 로그인 여부·현재 가게·가입 가능 여부·CSRF 토큰 |
 | GET | `/upjongs` | 로그인 전에도 조회 가능한 업종 목록. `upjongs` 배열에 `upjongCd`, `upjongNm`을 표시 순서대로 반환 |
+| GET | `/addresses/search?q=여의동` | 가입 화면의 주소 검색. `suggestions`에 도로명·지번·우편번호·시도/시군구 이름과 코드를 반환. `hasMore`가 참이면 다음 `page`(첫 페이지는 1)와 첫 응답의 `coverage`(`local` 또는 `national`)로 이어서 조회 |
 | POST | `/auth/signup` | `upjong`에 목록에서 선택한 코드를 보내 가게를 등록하고 로그인. 미등록 업종은 400, 중복 ID는 409 |
 | POST | `/auth/login`, `/auth/logout` | 세션 로그인 및 로그아웃 |
 | GET | `/health`, `/ready` | 프로세스 생존, DB 이름·스키마·서비스 열과 읽기 권한 검사. DB 준비 실패는 503 |

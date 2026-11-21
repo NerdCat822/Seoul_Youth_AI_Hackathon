@@ -9,6 +9,7 @@ export function Icon({
     | 'arrow'
     | 'back'
     | 'plus'
+    | 'search'
     | 'pin'
     | 'check'
     | 'note'
@@ -39,6 +40,12 @@ export function Icon({
     arrow: <path d="m9 5 7 7-7 7" />,
     back: <path d="m15 5-7 7 7 7" />,
     plus: <path d="M12 5v14M5 12h14" />,
+    search: (
+      <>
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <path d="m16 16 4.5 4.5" />
+      </>
+    ),
     idea: (
       <>
         <path d="M8 15a7 7 0 1 1 8 0c-1 .7-1.5 1.5-1.5 3h-5c0-1.5-.5-2.3-1.5-3Z" />

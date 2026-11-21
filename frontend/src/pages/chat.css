@@ -282,8 +282,7 @@ button.chat-card {
   color: inherit;
   background: transparent;
 }
-.chat-input-tools,
-.chat-input-right {
+.chat-input-tools {
   display: flex;
   align-items: center;
   justify-content: space-between;

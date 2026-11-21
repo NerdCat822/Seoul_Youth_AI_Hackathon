@@ -12,6 +12,7 @@ services:
       DB_NAME: ${DB_NAME:-hgkim_postgresql}
       DB_USER: ${DB_USER:-nerdcat822}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      JUSO_API_KEY:
       TRYLOG_DEMO_DATE: ${TRYLOG_DEMO_DATE:-}
       TRYLOG_ALLOW_WRITES: ${TRYLOG_ALLOW_WRITES:-false}
     volumes:

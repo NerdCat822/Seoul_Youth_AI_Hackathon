@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { ApiError, saveChatExchange, sendChat } from '../api';
 import { formatDate } from '../lib/dates';
 import { categories, difficulties } from '../lib/labels';
 import type { AgentChatResponse, Category, ChatCard, Experiment } from '../types';
 import { Icon } from './Icon';
+import { VoiceInput } from './VoiceInput';
 import '../pages/chat.css';
 
 interface PanelMessage {
@@ -22,6 +23,7 @@ interface PanelMessage {
 }
 
 const STORE_KEY = 'trylog.chat';
+const MESSAGE_LIMIT = 500;
 const EXAMPLES = [
   '요즘 점심시간에 손님이 줄었어',
   '오늘부터 2주 동안 쌀떡볶이에 추천 표시를 붙였어',
@@ -107,9 +109,17 @@ export function ChatPanel({
   const [messages, setMessages] = useState(initial.messages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const draftLength = Array.from(input.trim()).length;
+  const busy = sending || voiceBusy;
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nextKey = useRef(initial.messages.reduce((max, item) => Math.max(max, item.key), 0) + 1);
+
+  const addTranscript = useCallback((text: string) => {
+    setInput((current) => current + (current && !/\s$/.test(current) ? ' ' : '') + text);
+    inputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     try {
@@ -125,7 +135,7 @@ export function ChatPanel({
 
   async function send(text: string) {
     const message = text.trim();
-    if (!message || sending) return;
+    if (!message || busy || Array.from(message).length > MESSAGE_LIMIT) return;
     setInput('');
     setSending(true);
     const title = (messages.find((item) => item.role === 'USER')?.text ?? message).slice(0, 80);
@@ -200,7 +210,12 @@ export function ChatPanel({
   }
   function keyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     // 한글 조합 중의 Enter는 글자를 확정하는 키다. 조합이 끝난 Enter만 보낸다.
-    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing &&
+      event.nativeEvent.keyCode !== 229
+    ) {
       event.preventDefault();
       void send(input);
     }
@@ -241,7 +256,7 @@ export function ChatPanel({
                     type="button"
                     className="chat-chip"
                     key={example}
-                    disabled={sending}
+                    disabled={busy}
                     onClick={() => void send(example)}
                   >
                     {example}
@@ -254,7 +269,7 @@ export function ChatPanel({
           <ol className="chat-log" role="log" aria-live="polite" aria-label="대화 내용">
             {messages.map((message, index) => {
               const mine = message.role === 'USER';
-              const live = index === last && !sending;
+              const live = index === last && !busy;
               return (
                 <li
                   className={`chat-row ${mine ? 'chat-user' : 'chat-assistant'}`}
@@ -354,39 +369,42 @@ export function ChatPanel({
           id="chat-message"
           ref={inputRef}
           rows={2}
-          maxLength={500}
+          maxLength={input.length > MESSAGE_LIMIT ? undefined : MESSAGE_LIMIT}
+          aria-invalid={draftLength > MESSAGE_LIMIT || undefined}
+          aria-describedby={draftLength > MESSAGE_LIMIT ? 'chat-message-limit' : undefined}
           placeholder="이어서 이야기해 주세요."
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={keyDown}
         />
+        {draftLength > MESSAGE_LIMIT && (
+          <p className="chat-notice" role="status" id="chat-message-limit">
+            현재 {draftLength}자예요. 보낼 내용을 {MESSAGE_LIMIT}자 이내로 줄여 주세요.
+          </p>
+        )}
         <div className="chat-input-tools">
           {messages.length > 0 ? (
-            <button type="button" className="chat-reset" onClick={startOver} disabled={sending}>
+            <button type="button" className="chat-reset" onClick={startOver} disabled={busy}>
               <Icon name="plus" size={16} />새 대화
             </button>
           ) : (
             <span />
           )}
-          <span className="chat-input-right">
-            <button
-              type="button"
-              className="chat-round"
-              disabled
-              aria-label="음성으로 말하기 (준비 중)"
-              title="음성 입력은 준비 중이에요"
-            >
-              <Icon name="mic" size={18} />
-            </button>
-            <button
-              type="submit"
-              className="chat-round chat-send"
-              disabled={sending || !input.trim()}
-              aria-label="보내기"
-            >
-              <Icon name="send" size={18} />
-            </button>
-          </span>
+          {open && (
+            <VoiceInput
+              disabled={sending}
+              onTranscript={addTranscript}
+              onBusyChange={setVoiceBusy}
+            />
+          )}
+          <button
+            type="submit"
+            className="chat-round chat-send"
+            disabled={busy || !draftLength || draftLength > MESSAGE_LIMIT}
+            aria-label="보내기"
+          >
+            <Icon name="send" size={18} />
+          </button>
         </div>
       </form>
     </aside>

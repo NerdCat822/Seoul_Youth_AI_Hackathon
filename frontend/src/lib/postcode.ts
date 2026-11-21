@@ -21,7 +21,7 @@ interface PostcodeOptions {
 }
 
 type Postcode = new (options: PostcodeOptions) => {
-  embed: (container: HTMLElement, options: { autoClose: boolean }) => void;
+  embed: (container: HTMLElement, options: { autoClose: boolean; q?: string }) => void;
 };
 
 declare global {
