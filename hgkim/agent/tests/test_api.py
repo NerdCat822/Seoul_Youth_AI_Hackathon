@@ -330,3 +330,36 @@ def test_explain_retries_once_then_uses_spring_summary(client, spring, fake_llm)
     assert fallen["fallbackUsed"] is True and fallen["source"] == "RULES"
     assert fallen["explanation"] == spring.state.reports[DEMO_ID]["summary"]
     assert "140" not in fallen["explanation"] and "500" not in fallen["nextSuggestion"]
+
+
+# ------------------------------------------------------------------ 선택 설정: 일곱 필드를 받는 Spring
+
+def _seven_field_spring():
+    from fastapi.testclient import TestClient
+    from tests.fake_spring import create_fake_spring
+    fake = create_fake_spring(fields=7)
+    spring_tools.set_spring(spring_tools.SpringClient("http://fake-spring", client=TestClient(fake)))
+    return fake
+
+
+def test_five_fields_are_rejected_by_seven_field_spring(client):
+    fake = _seven_field_spring()
+    first = chat(client, "오늘부터 치즈돈까스 500원 올렸어. 2주 해볼게")
+    failed = chat(client, "저장", first["threadId"])
+    assert failed["status"] == "AWAITING_CONFIRM" and failed["notices"] == ["행동 유형을 입력해주세요."]
+    assert len(fake.state.experiments) == 1                           # 시연 기록뿐, 저장되지 않았다
+
+
+def test_seven_field_mode_sends_action_type_and_menu_code(client, monkeypatch):
+    import dataclasses
+    from trylog_agent.graph import nodes
+    from trylog_agent.settings import get_settings
+    fake = _seven_field_spring()
+    monkeypatch.setattr(nodes, "get_settings", lambda: dataclasses.replace(get_settings(), spring_fields=7))
+    first = chat(client, "오늘부터 치즈돈까스 500원 올렸어. 2주 해볼게")
+    saved = chat(client, "저장", first["threadId"])
+    assert saved["status"] == "SAVED"
+    assert fake.state.posts[0]["actionType"] == "PRICE_CHANGE" and fake.state.posts[0]["targetMenuCode"] == "A011009"
+    second = chat(client, "내일부터 2주 동안 가게 앞에 입간판 세워둘 거야")
+    assert chat(client, "저장", second["threadId"])["status"] == "SAVED"
+    assert fake.state.posts[1]["actionType"] == "STORE_SIGNAGE" and "targetMenuCode" not in fake.state.posts[1]
