@@ -4,6 +4,7 @@ import { CHAT_ENABLED } from '../lib/features';
 import { difficulties } from '../lib/labels';
 import type { Forecast } from '../pages/ForecastPage';
 import type { AppData, Experiment, NeighborhoodCase } from '../types';
+import { menuBadgeGuide } from './case-guides';
 import { publicCases, thumbnailByCaseId } from './case-thumbnails';
 import { loadWeekSales, mountHomeWeek, upcomingDates } from './home-week';
 import { daysBetween, recordUrl } from './record-ui';
@@ -211,7 +212,8 @@ function explore(data: AppData) {
 }
 
 function idea(data: AppData) {
-  const id = new URLSearchParams(location.search).get('id');
+  const requestedId = new URLSearchParams(location.search).get('id');
+  const id = requestedId === 'i1' ? 'menu-badge' : requestedId;
   const item = id ? data.cases.find((i) => i.id === id) : data.cases[0];
   const action = el<HTMLButtonElement>('[data-try]');
   if (!item) {
@@ -224,15 +226,34 @@ function idea(data: AppData) {
   }
   const { esc, icon } = window.App;
   const style = categoryStyle[item.category];
-  const sections = (title: string, body: string) =>
+  const guide = item.id === 'menu-badge' ? menuBadgeGuide : undefined;
+  const section = (title: string, body: string) =>
     `<section class="mt-12"><h2 class="section-title-lg">${title}</h2><div class="mt-5">${body}</div></section>`;
+  const copy = (title: string, note?: string) =>
+    `<div><p class="text-[15px] font-medium leading-6">${esc(title)}</p>${note ? `<p class="mt-1.5 text-[15px] leading-6 text-sub">${esc(note)}</p>` : ''}</div>`;
+  const bullet = (title: string, note?: string) =>
+    `<li class="flex gap-3"><span aria-hidden="true" class="mt-[9px] h-1 w-1 flex-none rounded-full bg-heading"></span>${copy(title, note)}</li>`;
+  const steps = (guide?.steps ?? [[item.tip]]).map(
+    ([title, note], index) =>
+      `<li class="flex gap-3"><span aria-hidden="true" class="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-brand-weak text-[13px] font-bold text-brand">${index + 1}</span>${copy(title, note)}</li>`,
+  );
   const meta = [
     ['inbox', '추가 비용', won(item.cost)],
-    ['time', '준비 정도', difficulties[item.difficulty]],
+    ['time', guide ? '준비 시간' : '준비 정도', guide?.prep ?? difficulties[item.difficulty]],
     ['calendar', '진행 기간', lengthLabel(item.durationDays)],
   ];
-  el('[data-article]').innerHTML =
-    `<div class="flex items-center gap-2 text-sm font-medium text-body"><span class="cat ${style.tag}">${style.label}</span><span>${difficulties[item.difficulty]}</span><span class="text-dim">·</span><span>추가 비용 ${won(item.cost)}</span></div><h1 class="page-title mt-4">${esc(item.title)}</h1><p class="mt-3 text-[15px] leading-6 text-body">${esc(item.summary)}</p><dl class="mt-8 space-y-3">${meta.map(([ic, key, val]) => `<div class="flex items-center gap-3 text-[15px]"><span class="text-dim">${icon(ic, 18)}</span><dt class="w-16 font-semibold">${key}</dt><dd class="font-medium">${esc(val)}</dd></div>`).join('')}</dl>${sections('적용 방법', `<ol class="space-y-5"><li class="flex gap-3"><span class="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-brand-weak text-[13px] font-bold text-brand">1</span><p class="text-[15px] font-medium leading-6">${esc(item.tip)}</p></li></ol>`)}`;
+  if (guide) meta.push(['file-list', '비교 항목', guide.compare]);
+  el('[data-article]').innerHTML = `
+    <div class="flex items-center gap-2 text-sm font-medium text-body"><span class="cat ${style.tag}">${style.label}</span><span>${difficulties[item.difficulty]}</span><span class="text-dim">·</span><span>추가 비용 ${won(item.cost)}</span></div>
+    <h1 class="page-title mt-4">${esc(item.title)}</h1>
+    <p class="mt-3 text-[15px] leading-6 text-body">${esc(guide?.lead ?? item.summary)}</p>
+    ${guide ? '<div class="divider mt-6"></div>' : ''}
+    <dl class="${guide ? 'mt-5' : 'mt-8'} space-y-3">${meta.map(([ic, key, val]) => `<div class="flex items-center gap-3 text-[15px]"><span class="text-dim">${icon(ic, 18)}</span><dt class="w-16 flex-none font-semibold">${key}</dt><dd class="font-medium">${esc(val)}</dd></div>`).join('')}</dl>
+    ${guide ? '<div class="divider mt-7"></div>' : ''}
+    ${guide ? section('이렇게 비교해요', `<ul>${bullet(guide.how)}</ul>`) : ''}
+    ${guide ? section('준비할 일', `<ul class="space-y-5">${guide.todo.map(([title, note]) => bullet(title, note)).join('')}</ul>`) : ''}
+    ${section('적용 방법', `<ol class="space-y-5">${steps.join('')}</ol>`)}
+    ${guide ? section('이런 가게에 잘 맞아요', `<ul class="space-y-3">${guide.fit.map((title) => bullet(title)).join('')}</ul>`) : ''}`;
   const segments: [string, number, string][] = [
     ['늘었음', item.improved, '#155dfc'],
     ['변화 없음', item.unchanged, '#00b8db'],
