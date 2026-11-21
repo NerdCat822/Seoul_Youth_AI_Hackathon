@@ -7,7 +7,7 @@
 
 **서비스 주소** · https://hgkim-mini-pc.taild27e83.ts.net/try-log/
 
-<p align="center"><img src=".github/readme/home.png" alt="트라이로그 홈: 다음 7일 예상 매출과 오른쪽 AI 대화창" width="900"></p>
+<p align="center"><img src=".github/readme/home.png" alt="트라이로그 홈: 인사말, 다음 7일 예상 매출과 진행 중인 기록, 기록 현황, 오른쪽 AI 대화창" width="900"></p>
 
 ---
 
@@ -79,9 +79,9 @@
 | --- | --- |
 | <img src=".github/readme/upload.png" alt="비교 메뉴 선택, DB 주문으로 비교, 파일 업로드" width="430"> | <img src=".github/readme/result.png" alt="쌀떡볶이 주문 42건에서 137건, 비중 6.83%에서 19.19%로 바뀐 비교 결과" width="430"> |
 
-### 5. 앞으로 7일 예상 매출
+### 5. 홈과 앞으로 7일 예상 매출
 
-홈과 매출 전망 화면에서 내일부터 7일간의 날짜별 예상 매출, 날씨, 그날 진행 중인 기록을 함께 봅니다.
+홈에서는 결과를 확인할 기록이 몇 건인지부터 알려 주고, 기록 현황(진행 중, 결과 확인 필요, 확인 완료)을 숫자로 보여 줍니다. 내일부터 7일간의 날짜별 예상 매출과 날씨 아래에는 그 주에 진행 중인 기록이 기간 막대로 함께 놓여서, 어떤 시도를 하는 동안 매출이 어떻게 예상되는지 한 화면에서 봅니다. 매출 전망 화면에서는 7일 합계, 하루 평균, 가장 많은 날을 따로 봅니다.
 
 <p align="center"><img src=".github/readme/forecast.png" alt="앞으로 7일 예상매출: 7일 합계, 하루 평균, 날짜별 막대그래프" width="860"></p>
 
