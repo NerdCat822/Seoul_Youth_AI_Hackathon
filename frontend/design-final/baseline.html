@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>과거 매출 기준선 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="records">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="mx-auto w-[960px] max-w-full">
+      <h1 class="page-title">과거 매출 기준선 (예시)</h1>
+      <p class="mt-3 text-base text-sub">시도 전 자료로 만든 예상 기준선과 실제 매출을 같은 날짜에 겹쳐 봐요.</p>
+      <p class="mt-8 rounded-xl bg-surface px-5 py-3 text-sm font-semibold text-sub">• 시연용 가상 데이터예요. 기준선과의 차이는 관찰값이며 시도 때문이라고 단정하지 않아요.</p>
+
+      <div class="mt-6 grid grid-cols-3 gap-4" data-stats></div>
+
+      <section class="mt-6 rounded-panel border border-line bg-white p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold">일별 매출</h2>
+          <div class="flex gap-4 text-[13px] font-medium text-sub">
+            <span class="flex items-center gap-1.5"><i class="h-0.5 w-4 bg-brand"></i>실제 매출</span>
+            <span class="flex items-center gap-1.5"><i class="w-4 border-t-2 border-dashed border-sub"></i>예상 기준선</span>
+          </div>
+        </div>
+        <div class="mt-4" data-chart></div>
+      </section>
+      <div class="mt-6 flex justify-end"><a href="result.html" class="btn btn-lg btn-neutral">결과로 돌아가기</a></div>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, won } = App;
+    // 11/5 ~ 12/2 (28일). 뒤 14일이 시도 기간. 기준선 합 1,310,000 · 실제 합 1,420,000
+    const base = [88, 92, 95, 90, 86, 99, 104, 87, 91, 96, 89, 85, 98, 105, 90, 94, 97, 92, 88, 101, 106, 89, 93, 95, 90, 86, 95, 94].map(v => v * 1000);
+    const real = [86, 94, 93, 92, 85, 101, 102, 88, 90, 97, 88, 87, 96, 107, 96, 102, 108, 99, 95, 112, 118, 96, 99, 103, 95, 92, 110, 95].map(v => v * 1000);
+    const sum = a => a.reduce((s, v) => s + v, 0);
+    const rb = sum(base.slice(14)), rr = sum(real.slice(14)), diff = rr - rb;
+    $('[data-stats]').innerHTML = [['시도 기간 실제 매출', won(rr) + '원', '11월 19일 ~ 12월 2일'], ['같은 기간 기준선', won(rb) + '원', '시도 전 자료로 계산'],
+      ['차이', (diff >= 0 ? '+' : '−') + won(Math.abs(diff)) + '원', `기준선보다 ${Math.round(diff / rb * 100)}% ${diff >= 0 ? '높아요' : '낮아요'} (관찰값)`]].map(([k, v, s]) =>
+      `<div class="rounded-panel border border-line bg-white p-5"><p class="text-[13px] font-medium text-sub">${k}</p><p class="mt-2 text-[30px] font-bold leading-9">${v}</p><p class="mt-3 text-[13px] font-medium text-sub">${s}</p></div>`).join('');
+
+    const W = 908, H = 240, padL = 8, padB = 28, min = 70000, max = 125000;
+    const x = i => padL + i * (W - padL * 2) / 27, y = v => (H - padB) - (v - min) / (max - min) * (H - padB - 10);
+    const path = a => a.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    const ticks = [[0, '11/5'], [7, '11/12'], [14, '11/19'], [21, '11/26'], [27, '12/2']];
+    $('[data-chart]').innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="w-full" role="img" aria-label="11월 5일부터 12월 2일까지 일별 실제 매출과 예상 기준선">
+      <rect x="${x(14)}" y="0" width="${x(27) - x(14)}" height="${H - padB}" fill="#00aa72" opacity="0.07"/>
+      <text x="${x(14) + 8}" y="16" font-size="13" fill="#6a7282" font-weight="500">시도 기간</text>
+      ${[0.25, 0.5, 0.75].map(t => `<line x1="0" x2="${W}" y1="${(H - padB) * t}" y2="${(H - padB) * t}" stroke="rgba(3,7,18,0.06)"/>`).join('')}
+      <line x1="0" x2="${W}" y1="${H - padB}" y2="${H - padB}" stroke="rgba(3,7,18,0.12)"/>
+      <path d="${path(base)}" fill="none" stroke="#6a7282" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <path d="${path(real)}" fill="none" stroke="#00aa72" stroke-width="2.5" stroke-linejoin="round"/>
+      ${ticks.map(([i, l]) => `<text x="${x(i)}" y="${H - 6}" font-size="13" fill="#6a7282" font-weight="500" text-anchor="${i === 27 ? 'end' : i ? 'middle' : 'start'}">${l}</text>`).join('')}
+    </svg>`;
+  </script>
+</body>
+</html>

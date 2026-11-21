@@ -99,13 +99,14 @@ function shown(
 }
 
 export function ChatPanel({
+  loginId,
   storeId,
   open,
   onClose,
   onNavigate,
   onSaved,
 }: {
-  /** 대화는 가게별로 따로 기억한다. */
+  loginId: string | null;
   storeId: number;
   open: boolean;
   onClose: () => void;
@@ -113,8 +114,8 @@ export function ChatPanel({
   onNavigate: () => void;
   onSaved: (experiment: Experiment) => void;
 }) {
-  const storeKey = `${STORE_KEY}.${storeId}`;
-  const [initial] = useState(() => restore(storeKey));
+  const chatKey = loginId ? `${STORE_KEY}.${storeId}.${loginId}` : null;
+  const [initial] = useState(() => (chatKey ? restore(chatKey) : { threadId: null, messages: [] }));
   const [threadId, setThreadId] = useState(initial.threadId);
   const [messages, setMessages] = useState(initial.messages);
   const [input, setInput] = useState('');
@@ -145,12 +146,13 @@ export function ChatPanel({
   useEffect(() => () => stopSpeaking(), []);
 
   useEffect(() => {
+    if (!chatKey) return;
     try {
-      window.sessionStorage.setItem(storeKey, JSON.stringify({ threadId, messages }));
+      window.sessionStorage.setItem(chatKey, JSON.stringify({ threadId, messages }));
     } catch {
       // 저장 공간을 쓸 수 없어도 대화는 계속한다.
     }
-  }, [storeKey, threadId, messages]);
+  }, [chatKey, threadId, messages]);
   useEffect(() => {
     const box = scrollRef.current;
     if (box) box.scrollTop = box.scrollHeight;

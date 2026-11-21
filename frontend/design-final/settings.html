@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>설정 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="settings">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="container-main">
+      <h1 class="page-title">설정</h1>
+
+      <!-- SE-01 계정 -->
+      <section class="card mt-8 p-8">
+        <h2 class="section-title">계정</h2>
+        <div class="mt-6 grid max-w-[760px] gap-6">
+          <div><label class="label" for="se-id">아이디</label><input class="input bg-surface-2 text-sub" id="se-id" value="happybunsik" readonly></div>
+          <div><label class="label" for="se-pw">비밀번호</label>
+            <div class="flex gap-2"><input class="input" id="se-pw" type="password" value="password1234" readonly>
+              <button type="button" class="btn btn-lg btn-neutral h-12" data-change-pw>변경</button></div></div>
+        </div>
+        <button type="button" class="btn btn-sm btn-neutral mt-6" data-logout>로그아웃</button>
+      </section>
+
+      <!-- SE-02 개인정보 및 데이터 활용 -->
+      <section class="card mt-6 p-8">
+        <h2 class="section-title">개인정보 및 데이터 활용 동의</h2>
+        <dl class="mt-4 divide-y divide-line-light">
+          <div class="flex items-center gap-6 py-5">
+            <dt class="w-[180px] flex-none text-sm font-medium text-sub">개인정보 수집 이용</dt>
+            <dd class="flex-1 text-base font-medium">올린 판매 자료는 결과 분석에 사용돼요</dd>
+            <button type="button" role="switch" aria-checked="true" aria-label="판매 자료 분석 사용" class="relative h-7 w-12 flex-none rounded-full bg-brand transition-colors aria-[checked=false]:bg-[#d1d5dc]" data-switch>
+              <span class="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform"></span></button>
+          </div>
+          <div class="flex items-center gap-6 py-5">
+            <dt class="w-[180px] flex-none text-sm font-medium text-sub">데이터 활용</dt>
+            <dd class="flex-1 text-base font-medium">기록 · 시도 결과 내려받기</dd>
+            <button type="button" class="btn btn-sm btn-neutral" data-export><span data-icon="file-excel" data-size="16"></span>내려받기</button>
+          </div>
+        </dl>
+      </section>
+
+      <div class="mt-6 flex justify-end"><button type="button" class="btn btn-sm btn-danger-outline" data-withdraw>계정 삭제</button></div>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, toast, openModal } = App;
+    const D = TRYLOG;
+    const sw = $('[data-switch]'), knob = sw.firstElementChild;
+    const paint = () => (knob.style.transform = sw.getAttribute('aria-checked') === 'true' ? 'translateX(20px)' : 'none');
+    sw.addEventListener('click', () => {
+      sw.setAttribute('aria-checked', String(sw.getAttribute('aria-checked') !== 'true')); paint();
+      toast(sw.getAttribute('aria-checked') === 'true' ? '판매 자료를 결과 분석에 사용해요.' : '판매 자료를 결과 분석에 사용하지 않아요. 결과 보기가 제한돼요.');
+    });
+    paint();
+
+    $('[data-logout]').addEventListener('click', () => openModal({ title: '로그아웃할까요?', body: '다시 로그인하면 기록과 판매 자료를 그대로 볼 수 있어요.', confirm: '로그아웃', onConfirm: () => (location.href = 'login.html') }));
+    $('[data-change-pw]').addEventListener('click', () => openModal({ title: '비밀번호 변경', confirm: '변경하기',
+      body: `<input type="password" class="input mt-2" placeholder="새 비밀번호 (8자 이상)" id="np"><p class="mt-2 text-sm">변경하면 다른 기기에서는 다시 로그인해야 해요.</p>`,
+      onConfirm: m => toast(m.querySelector('#np').value.length >= 8 ? '비밀번호를 바꿨어요.' : '8자 이상 입력해 주세요. 비밀번호는 바뀌지 않았어요.') }));
+    $('[data-export]').addEventListener('click', () => {
+      const csv = '﻿기록명,상태,시작일,종료일,결과 확인일,비교 항목\n' + D.records.map(r => [r.title, D.statusLabel[r.status], r.start, r.end, r.result, r.compare].join(',')).join('\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'trylog_내기록.csv'; a.click();
+      toast('기록과 시도 결과를 내려받았어요.');
+    });
+    // SE-01-B 회원 탈퇴: 안내 확인 체크 후에만 버튼 활성화
+    $('[data-withdraw]').addEventListener('click', () => openModal({
+      title: '정말 탈퇴할까요?', confirm: '탈퇴하기', tone: 'danger', disabledUntil: '#agree',
+      body: `<p>탈퇴하면 아래 자료가 모두 지워지고 되돌릴 수 없어요.</p>
+        <ul class="mt-3 space-y-1 rounded-xl bg-surface-2 px-4 py-3 text-sm font-semibold text-heading">
+          <li>· 가게 정보</li><li>· 내 기록과 시도 결과 ${D.records.length}건</li><li>· 올린 판매 자료 92일치</li><li>· AI 대화 ${D.chats.length}개</li></ul>
+        <label class="mt-4 flex items-center gap-2 text-sm font-semibold text-heading"><input type="checkbox" id="agree" class="h-[18px] w-[18px] accent-[#00aa72]"> 안내를 확인했어요</label>`,
+      onConfirm: () => (location.href = 'login.html?toast=' + encodeURIComponent('탈퇴했어요. 그동안 이용해 주셔서 고마워요.')) }));
+    App.hydrateIcons();
+  </script>
+</body>
+</html>

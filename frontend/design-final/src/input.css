@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url('../fonts/PretendardVariable.woff2') format('woff2-variations');
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-white text-heading font-sans; font-feature-settings: "ss01" 1, "tnum" 1; }
+  button { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid #00aa72; outline-offset: 2px; }
+  [hidden] { display: none !important; }
+}
+
+@layer components {
+  /* layout */
+  .page { @apply px-6 pt-12 pb-16; }
+  .container-main { @apply mx-auto w-full max-w-container; }
+  .page-title { @apply text-[30px] leading-9 font-bold text-heading; }
+  .page-desc { @apply mt-1 text-base leading-6 text-sub; }
+  .section-title { @apply text-[18px] leading-7 font-bold text-heading; }
+  .section-title-lg { @apply text-[20px] leading-7 font-bold text-heading; }
+  .more-link { @apply inline-flex items-center gap-0.5 text-sm font-medium text-link hover:underline; }
+
+  /* surfaces */
+  .card { @apply rounded-card border border-line-light bg-white; }
+  .card-strong { @apply rounded-card border border-line bg-white; }
+  .panel { @apply rounded-panel border border-line-light bg-white; }
+  .note { @apply rounded-2xl bg-surface p-6; }
+  .divider { @apply h-px w-full bg-divider; }
+
+  /* buttons */
+  .btn { @apply inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-xl font-medium transition-colors disabled:cursor-not-allowed; }
+  .btn-sm { @apply h-8 px-3 text-sm; }
+  .btn-md { @apply h-9 px-3.5 text-[15px]; }
+  .btn-lg { @apply h-10 px-4 text-[15px]; }
+  .btn-xl { @apply h-12 px-5 text-base font-semibold; }
+  .btn-primary { @apply bg-brand text-white hover:bg-[#009a67] active:bg-[#008a5c] disabled:bg-surface disabled:text-muted; }
+  .btn-neutral { @apply border border-line bg-white text-heading hover:bg-surface-2 active:bg-surface disabled:text-muted; }
+  .btn-ghost { @apply text-heading hover:bg-surface-2; }
+  .btn-danger { @apply bg-danger text-white hover:bg-[#c80009]; }
+  .btn-danger-outline { @apply border border-danger/40 bg-white text-danger hover:bg-red-50; }
+  .btn-text { @apply inline-flex items-center gap-0.5 rounded-md text-[15px] font-medium text-brand-text hover:underline; }
+  .icon-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-xl text-heading hover:bg-surface-2; }
+
+  /* chips · toggles */
+  .chip { @apply inline-flex h-8 items-center whitespace-nowrap rounded-full border border-line bg-white px-3 text-sm font-medium text-heading transition-colors hover:bg-surface-2; }
+  .chip[aria-pressed="true"], .chip[aria-checked="true"] { @apply border-brand/50 bg-brand-weak text-brand-text; }
+  .hint-chip { @apply inline-flex h-[37px] items-center whitespace-nowrap rounded-full border border-line bg-white px-4 text-[15px] font-medium text-heading hover:bg-surface-2; }
+  .filter-tab { @apply inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-white px-3.5 text-sm font-medium text-heading hover:bg-surface-2; }
+  .filter-tab[aria-selected="true"] { @apply border-brand bg-brand text-white hover:bg-brand; }
+  .filter-tab .count { @apply text-[13px]; }
+  .seg { @apply inline-flex rounded-xl bg-surface p-1; }
+  .seg button { @apply h-8 rounded-lg px-3.5 text-sm font-medium text-sub; }
+  .seg button[aria-selected="true"] { @apply bg-white text-heading shadow-sm; }
+  .line-tabs { @apply flex gap-2 border-b border-line-light; }
+  .line-tabs a, .line-tabs button { @apply -mb-px border-b-2 border-transparent px-4 pb-2.5 pt-2 text-base font-medium text-sub hover:text-heading; }
+  .line-tabs [aria-selected="true"] { @apply border-brand text-brand-text; }
+
+  /* badges */
+  .badge { @apply inline-flex h-[22px] items-center whitespace-nowrap rounded-full px-2.5 text-sm font-medium; }
+  .badge-check { @apply bg-info text-white; }          /* 확인 필요 */
+  .badge-progress { @apply bg-[#dbeafe] text-info; }   /* 진행 중 */
+  .badge-planned { @apply bg-surface text-sub; }       /* 시작 예정 · 중단 */
+  .badge-done { @apply bg-[#e2fbe8] text-[#33803f]; }  /* 완료 */
+  .badge-warn { @apply bg-[#fff1e6] text-[#c2410c]; }  /* 자료 확인 필요 */
+  .cat { @apply inline-flex h-6 items-center rounded-md px-1.5 text-sm font-medium; }
+  .cat-delivery { @apply bg-cat-delivery-bg text-cat-delivery; }
+  .cat-menu { @apply bg-cat-menu-bg text-cat-menu; }
+  .cat-store { @apply bg-cat-store-bg text-cat-store; }
+
+  /* forms */
+  .label { @apply mb-2 block text-[15px] font-medium text-body; }
+  .req { @apply ml-0.5 text-brand-text; }
+  .input { @apply h-12 w-full rounded-xl border border-line bg-white px-3 text-[15px] text-heading placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15; }
+  .input-sm { @apply h-10; }
+  .input[aria-invalid="true"] { @apply border-error focus:ring-error/15; }
+  .textarea { @apply w-full rounded-xl border border-line bg-white p-3 text-[15px] leading-6 text-heading placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15; }
+  .field-error { @apply mt-1.5 text-sm font-semibold text-error; }
+  .field-help { @apply mt-1.5 text-[13px] font-medium text-sub; }
+
+  /* idea card (이미지 영역 + 카테고리 + 제목) */
+  .idea-card { @apply flex flex-col overflow-hidden rounded-card border border-line-light bg-white transition-shadow hover:shadow-panel; }
+  .idea-card .thumb { @apply h-40 w-full; }
+  .idea-card .body { @apply flex flex-col gap-1 p-5; }
+
+  /* stepper */
+  .stepper { @apply flex items-center gap-3; }
+  .stepper .step { @apply flex items-center gap-2 text-sm font-medium text-muted; }
+  .stepper .num { @apply flex h-6 w-6 items-center justify-center rounded-full bg-surface text-[13px] font-semibold text-sub; }
+  .stepper .step.is-done { @apply text-heading; }
+  .stepper .step.is-done .num { @apply bg-brand-weak text-brand; }
+  .stepper .step.is-current { @apply font-semibold text-heading; }
+  .stepper .step.is-current .num { @apply bg-brand text-white; }
+  .stepper .bar { @apply h-px w-8 bg-line; }
+
+  /* table */
+  .table { @apply w-full overflow-hidden rounded-2xl border border-line text-left; }
+  .table th { @apply bg-surface-2 px-5 py-3 text-sm font-medium text-body; }
+  .table td { @apply border-t border-line-light px-5 py-3 text-sm text-body; }
+  .table tbody tr { @apply cursor-pointer hover:bg-surface-2; }
+
+  /* popovers · modal */
+  .popover { @apply absolute z-40 rounded-2xl border border-line-light bg-white shadow-pop; }
+  .menu-item { @apply flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-heading hover:bg-surface-2; }
+  .modal-backdrop { @apply fixed inset-0 z-50 flex items-center justify-center bg-[rgba(3,7,18,0.4)] p-6; }
+  .modal { @apply w-full max-w-[440px] rounded-panel bg-white p-6 shadow-pop; }
+
+  /* detail rows */
+  .kv { @apply grid grid-cols-[112px_1fr] items-start gap-x-4 gap-y-1 text-[15px]; }
+  .kv dt { @apply font-semibold text-heading; }
+  .kv dd { @apply font-medium text-heading; }
+
+  /* chart */
+  .bar-col { @apply flex h-full flex-1 items-end justify-center px-4; }
+  .bar { @apply w-full max-w-10 rounded-t bg-brand; }
+
+  /* AI chat */
+  .bubble-user { @apply ml-auto max-w-[75%] rounded-2xl bg-surface px-5 py-3 text-base leading-6 text-body; }
+  .ai-avatar { @apply flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-weak text-brand; }
+  .composer { @apply rounded-card border border-line bg-white px-5 pb-4 pt-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]; }
+  .round-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-heading hover:bg-surface-2; }
+  .send-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white hover:bg-[#009a67] disabled:bg-surface disabled:text-muted; }
+
+  /* toast */
+  .toast { @apply pointer-events-none fixed bottom-8 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-heading px-4 py-3 text-sm font-medium text-white opacity-0 shadow-pop transition-opacity; }
+  .toast.is-on { @apply opacity-100; }
+}

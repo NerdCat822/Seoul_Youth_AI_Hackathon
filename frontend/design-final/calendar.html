@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>달력 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="calendar">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="container-main">
+      <div class="flex items-center justify-between">
+        <div><h1 class="page-title">달력</h1><p class="page-desc">바꾼 내용을 기록하고, 결과 확인일에 전후를 비교해요.</p></div>
+        <a href="ai.html?start=record" class="btn btn-xl btn-primary">새 기록 작성하기</a>
+      </div>
+
+      <div class="mt-10 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button type="button" class="icon-btn h-8 w-8" data-move="-1" aria-label="이전 달"></button>
+          <h2 class="min-w-[124px] text-center text-[20px] font-bold" data-month aria-live="polite"></h2>
+          <button type="button" class="icon-btn h-8 w-8" data-move="1" aria-label="다음 달"></button>
+          <button type="button" class="btn btn-sm btn-neutral ml-2" data-today>오늘 날짜로 이동</button>
+        </div>
+        <div class="flex items-center gap-4 text-[13px] font-medium text-sub">
+          <span class="flex items-center gap-1.5"><i class="h-2 w-5 rounded-sm bg-[#dbeafe]"></i>진행 기간</span>
+          <span class="flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-brand"></i>결과 확인일</span>
+        </div>
+      </div>
+
+      <div class="mt-5 overflow-hidden rounded-2xl border border-line">
+        <div class="grid grid-cols-7 bg-surface-2 text-[13px] font-medium text-sub" data-weekdays></div>
+        <div class="grid grid-cols-7" data-grid></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, $$, icon, esc } = App;
+    const D = TRYLOG;
+    const spans = { r1: ['2026-11-19', '2026-12-02', '2026-12-03', '#155dfc'], r2: ['2026-11-24', '2026-12-07', '2026-12-08', '#0092b8'],
+      r3: ['2026-11-30', '2026-12-13', '2026-12-14', '#8e51ff'], r4: ['2026-12-08', '2026-12-21', '2026-12-22', '#e60076'],
+      r5: ['2026-10-06', '2026-11-02', '2026-11-03', '#6a7282'], r6: ['2026-10-13', '2026-10-26', null, '#6a7282'] };
+    const short = { r1: '떡볶이', r2: '점심', r3: '배달', r4: '포장', r5: '리뷰', r6: '저녁' };
+    const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let view = new Date(2026, 11, 1);
+    const TODAY = D.today;
+
+    $$('[data-move]').forEach(b => (b.innerHTML = icon(b.dataset.move === '-1' ? 'chevron-left' : 'chevron-right', 20)));
+    $('[data-weekdays]').innerHTML = [...'일월화수목금토'].map(w => `<span class="px-3 py-3">${w}</span>`).join('');
+
+    function render() {
+      $('[data-month]').textContent = `${view.getFullYear()}년 ${view.getMonth() + 1}월`;
+      const first = new Date(view.getFullYear(), view.getMonth(), 1);
+      const start = new Date(first); start.setDate(1 - first.getDay());
+      let html = '';
+      for (let k = 0; k < 35; k++) {
+        const d = new Date(start); d.setDate(start.getDate() + k);
+        const key = ymd(d), inMonth = d.getMonth() === view.getMonth(), isToday = key === TODAY;
+        const items = D.records.filter(r => spans[r.id] && key >= spans[r.id][0] && key <= spans[r.id][1]).slice(0, 3).map(r =>
+          `<a href="record.html?id=${r.id}" class="block truncate rounded px-1.5 py-0.5 text-[13px] font-medium hover:brightness-95" style="color:${spans[r.id][3]};background:${spans[r.id][3]}14">${esc(r.title)}</a>`).join('');
+        const results = D.records.filter(r => spans[r.id] && spans[r.id][2] === key).map(r =>
+          `<a href="${r.status === 'done' ? 'result.html' : 'record.html?id=' + r.id}" class="block truncate rounded bg-brand px-1.5 py-0.5 text-[13px] font-semibold text-white hover:bg-[#009a67]">결과 확인 · ${short[r.id]}</a>`).join('');
+        html += `<div class="min-h-[124px] border-t border-line-light p-2 ${k % 7 ? 'border-l' : ''} ${inMonth ? '' : 'bg-surface-2/60'}">
+          <span class="mb-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full px-1 text-[13px] font-medium ${isToday ? 'bg-info font-semibold text-white' : inMonth ? 'text-body' : 'text-muted'}">${d.getDate()}</span>
+          <div class="space-y-1">${results}${items}</div></div>`;
+      }
+      $('[data-grid]').innerHTML = html;
+    }
+    $$('[data-move]').forEach(b => b.addEventListener('click', () => { view.setMonth(view.getMonth() + +b.dataset.move); render(); }));
+    $('[data-today]').addEventListener('click', () => { view = new Date(2026, 11, 1); render(); });
+    render();
+  </script>
+</body>
+</html>

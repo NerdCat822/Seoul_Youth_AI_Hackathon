@@ -24,7 +24,7 @@ function UpjongField({ error }: { error?: string }) {
       aria-labelledby="upjong-label"
       aria-required="true"
       aria-invalid={!!error}
-      aria-describedby={error ? 'upjong-error' : undefined}
+      aria-describedby={error ? 'upjong-sharing upjong-error' : 'upjong-sharing'}
       tabIndex={-1}
     >
       <span className="auth-field-label" id="upjong-label">
@@ -56,6 +56,9 @@ function UpjongField({ error }: { error?: string }) {
           업종을 불러오고 있어요…
         </p>
       )}
+      <p className="upjong-hint" id="upjong-sharing">
+        같은 업종으로 가입한 계정은 메뉴, 매출, 시도, 대화 내역을 공유합니다.
+      </p>
       {error && (
         <span className="field-error" id="upjong-error">
           {error}
@@ -119,7 +122,6 @@ export function AuthPage({
     setMessage('');
     setErrors((current) => ({
       ...current,
-      postalCode: '',
       address: '',
       addressDetail: '',
       megaCd: '',
@@ -135,12 +137,7 @@ export function AuthPage({
     if (address) detail.focus();
   }, [address]);
   const addressError =
-    errors.address ||
-    errors.postalCode ||
-    errors.megaCd ||
-    errors.megaNm ||
-    errors.ctyCd ||
-    errors.ctyNm;
+    errors.address || errors.megaCd || errors.megaNm || errors.ctyCd || errors.ctyNm;
 
   function displayErrors(issues: Record<string, string>) {
     setErrors(issues);
@@ -218,7 +215,7 @@ export function AuthPage({
         <a className="auth-brand" href="#/login" aria-label="트라이로그 로그인">
           <i aria-hidden="true">✓</i>Trylog
         </a>
-        <h1>{signup ? '가게 등록' : '우리 가게 로그인'}</h1>
+        <h1>{signup ? '가게 계정 등록' : '우리 가게 로그인'}</h1>
         <p className="auth-lead">
           {signup
             ? '별표(*)가 있는 항목을 입력해주세요.'
@@ -226,7 +223,7 @@ export function AuthPage({
         </p>
         {signup && !signupEnabled ? (
           <section className="auth-disabled">
-            <p>현재 서버는 읽기 전용으로 운영되어 가게 등록이 닫혀 있어요.</p>
+            <p>현재 서버는 읽기 전용으로 운영되어 계정 등록이 닫혀 있어요.</p>
             <a className="button secondary" href="#/login">
               로그인으로 돌아가기
             </a>

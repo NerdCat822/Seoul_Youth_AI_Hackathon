@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>첫 방문 홈 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="home">
+  <header data-topbar="guest"></header>
+
+  <div class="flex justify-center gap-20 px-14 pb-16 pt-8">
+    <main class="w-full max-w-container min-w-0">
+      <h1 class="page-title">오늘 바로 해볼 수 있는 일부터 시작해 보세요</h1>
+      <p class="mt-5 text-base text-sub">돈 들이지 않고, 지금 가게에서 바로 할 수 있는 방법만 모았어요.</p>
+
+      <!-- 가게 정보 입력 유도 -->
+      <section class="mt-10 flex items-center justify-between rounded-card bg-brand-weak px-6 py-5">
+        <div><h2 class="text-[18px] font-bold">가게 정보를 알려주시면 우리 가게에 맞는 방법으로 골라드려요</h2>
+          <p class="mt-1 text-sm text-body">업종 · 주요 메뉴 · 영업시간만 입력하면 돼요.</p></div>
+        <a href="signup.html" class="btn btn-lg btn-primary font-semibold">가게 정보 입력</a>
+      </section>
+
+      <!-- 시작 방법 3가지 -->
+      <div class="mt-4 grid grid-cols-3 gap-4">
+        <a href="ai.html" class="card flex gap-3 p-5 hover:shadow-panel">
+          <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-surface text-heading" data-icon="chat"></span>
+          <span><span class="block text-[15px] font-semibold">고민 상담하기</span><span class="mt-1 block text-sm text-body">매출, 고객, 메뉴 등 운영에 대한 고민을 함께 해결해요.</span></span></a>
+        <a href="explore.html" class="card flex gap-3 p-5 hover:shadow-panel">
+          <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-surface text-heading" data-icon="lightbulb"></span>
+          <span><span class="block text-[15px] font-semibold">아이디어 찾기</span><span class="mt-1 block text-sm text-body">우리 가게에 적용할 수 있는 새로운 방법을 찾아요.</span></span></a>
+        <a href="ai.html?start=record" class="card flex gap-3 p-5 hover:shadow-panel">
+          <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-surface text-heading" data-icon="pencil"></span>
+          <span><span class="block text-[15px] font-semibold">변화 기록하기</span><span class="mt-1 block text-sm text-body">메뉴, 가격, 홍보 방법 등을 기록하고 전후 결과를 비교해요.</span></span></a>
+      </div>
+
+      <section class="mt-16">
+        <div class="flex items-end justify-between">
+          <div><h2 class="section-title">오늘 바로 시작할 수 있는 일</h2><p class="mt-1 text-sm text-sub">준비 없이 오늘부터 해볼 수 있어요.</p></div>
+          <a href="explore.html" class="more-link">전체 보기 <span data-icon="chevron-right" data-size="16"></span></a>
+        </div>
+        <div class="mt-5 grid grid-cols-3 gap-6" data-today></div>
+      </section>
+
+      <section class="mt-16">
+        <div class="flex items-center justify-between"><h2 class="section-title">0원으로 할 수 있는 일</h2>
+          <a href="explore.html?free=1" class="more-link">전체 보기 <span data-icon="chevron-right" data-size="16"></span></a></div>
+        <div class="mt-5 grid grid-cols-3 gap-6" data-free></div>
+      </section>
+
+      <div class="mt-20 grid grid-cols-2 gap-4">
+        <section class="card p-6">
+          <h2 class="section-title">앞으로 7일 예상매출</h2>
+          <p class="mt-1 text-sm text-sub">판매 자료를 올리면 다음 7일 매출을 미리 볼 수 있어요.</p>
+          <a href="forecast.html?state=empty" class="more-link mt-6">판매 자료 올리기 <span data-icon="chevron-right" data-size="16"></span></a>
+        </section>
+        <section class="card p-6">
+          <h2 class="section-title">동네 가게들은 뭘 해봤을까?</h2>
+          <p class="mt-1 text-sm text-sub">마포구 분식집들이 해본 시도 12가지</p>
+          <a href="explore.html" class="more-link mt-6">동네 사례 보기 <span data-icon="chevron-right" data-size="16"></span></a>
+        </section>
+      </div>
+    </main>
+    <div class="flex-none transition-[width]" data-ai-host></div>
+  </div>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-chat.js"></script>
+  <script>
+    const { $, $$, icon, ideaCard } = App;
+    const pick = ids => ids.map(id => ideaCard(TRYLOG.ideas.find(i => i.id === id))).join('');
+    $('[data-today]').innerHTML = pick(['i6', 'i4', 'i5']);
+    $('[data-free]').innerHTML = pick(['i1', 'i7', 'i3']);
+    App.hydrateIcons();
+    mountAiPanel($('[data-ai-host]'));
+  </script>
+</body>
+</html>

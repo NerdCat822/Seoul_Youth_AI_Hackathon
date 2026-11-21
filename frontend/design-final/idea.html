@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>사례 상세 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="explore">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="container-main flex items-start gap-10">
+      <article class="min-w-0 flex-1" data-article></article>
+      <aside class="sticky top-24 w-[390px] flex-none">
+        <a class="btn btn-xl btn-primary w-full" data-try>우리 가게에서 해보기</a>
+        <section class="mt-5 rounded-xl border border-line-light bg-white p-5" data-peers></section>
+      </aside>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, icon, esc, params } = App;
+    const D = TRYLOG;
+    const i = D.ideas.find(x => x.id === params.get('id')) || D.ideas[0];
+    const c = D.categories[i.cat];
+    const d = D.ideaDetail[i.id] || {
+      lead: `${i.desc} 작은 변화부터 ${i.weeks}주 동안 해보고, 전후 결과를 비교해요.`, prep: '약 30분',
+      compare: i.cat === 'delivery' ? '배달 주문 건수, 재주문 건수' : '관련 메뉴 주문 건수, 매출액',
+      how: `변경 전후 ${i.weeks}주 동안 같은 항목을 비교해요.`,
+      todo: [['바꾸기 전 판매 자료', '나중에 결과를 볼 때 필요해요. POS에서 내려받을 수 있어요.'], ['바꾼 모습을 찍은 사진', '시작한 날 한 장이면 충분해요.']],
+      steps: [[`${i.title.replace(/하기$/, '')}을(를) 오늘 바로 시작해요.`, '처음에는 한 가지만 바꿔 보세요.'], [`${i.weeks}주 동안 다른 변경 없이 그대로 운영해요.`, '같은 기간에 다른 일을 하면 결과의 정확한 이유를 알기 어려워요.']],
+      fit: ['비슷한 고민이 있는 가게', '비용 부담 없이 시작하고 싶은 가게'],
+      peers: { base: '서울 분식집 · 하루 주문 80~150건 기준', total: 6, up: 3, same: 2, down: 0, unknown: 1 },
+    };
+    document.title = `${i.title} · trylog`;
+    const sec = (title, body) => `<section class="mt-12"><h2 class="section-title-lg">${title}</h2><div class="mt-5">${body}</div></section>`;
+    const bullet = (t, sub) => `<li class="flex gap-3"><span class="mt-[9px] h-1 w-1 flex-none rounded-full bg-heading"></span><div><p class="text-[15px] font-medium leading-6">${esc(t)}</p>${sub ? `<p class="mt-1.5 text-[15px] leading-6 text-sub">${esc(sub)}</p>` : ''}</div></li>`;
+
+    $('[data-article]').innerHTML = `
+      <div class="flex items-center gap-2 text-sm font-medium text-body"><span class="cat ${c.cls}">${c.label}</span>
+        <span>${i.ease === '바로 시작' ? '바로 가능' : i.ease}</span><span class="text-dim">·</span><span>추가 비용 ${i.cost}</span></div>
+      <h1 class="page-title mt-4">${esc(i.title)}</h1>
+      <p class="mt-3 text-[15px] leading-6 text-body">${esc(d.lead)}</p>
+      <dl class="mt-8 space-y-3">${[['inbox', '추가 비용', i.cost], ['time', '준비 시간', d.prep], ['calendar', '진행 기간', i.weeks + '주'], ['file-list', '비교 항목', d.compare]].map(([ic, k, v]) =>
+        `<div class="flex items-center gap-3 text-[15px]"><span class="text-dim">${icon(ic, 18)}</span><dt class="w-16 font-semibold">${k}</dt><dd class="font-medium">${esc(v)}</dd></div>`).join('')}</dl>
+      ${sec('이렇게 비교해요', `<ul>${bullet(d.how)}</ul>`)}
+      ${sec('준비할 일', `<ul class="space-y-5">${d.todo.map(([t, s]) => bullet(t, s)).join('')}</ul>`)}
+      ${sec('적용 방법', `<ol class="space-y-5">${d.steps.map(([t, s], n) => `<li class="flex gap-3"><span class="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-brand-weak text-[13px] font-bold text-brand">${n + 1}</span>
+        <div><p class="text-[15px] font-medium leading-6">${esc(t)}</p><p class="mt-1.5 text-[15px] leading-6 text-sub">${esc(s)}</p></div></li>`).join('')}</ol>`)}
+      ${sec('이런 가게에 잘 맞아요', `<ul class="space-y-3">${d.fit.map(t => bullet(t)).join('')}</ul>`)}`;
+
+    const p = d.peers, seg = [['늘었음', p.up, '#155dfc'], ['변화 없음', p.same, '#00b8db'], ['줄었음', p.down, '#ad46ff'], ['판단 어려움', p.unknown, '#f0b100']];
+    $('[data-peers]').innerHTML = `<h2 class="text-[18px] font-bold">비슷한 가게의 변화</h2>
+      <p class="mt-1 text-sm text-sub">${esc(p.base)}</p>
+      <p class="mt-5"><b class="text-2xl font-bold">${p.total}곳 중 ${p.up}곳</b> <span class="ml-1 text-base text-body">주문이 늘었어요</span></p>
+      <div class="mt-4 flex h-2 gap-1">${seg.filter(s => s[1]).map(([, n, col]) => `<span class="rounded-full" style="flex:${n};background:${col}"></span>`).join('')}</div>
+      <ul class="mt-4 space-y-2">${seg.map(([l, n, col]) => `<li class="flex items-center justify-between text-sm"><span class="flex items-center gap-2 text-body"><i class="h-1.5 w-1.5 rounded-full" style="background:${col}"></i>${l}</span><span class="font-medium">${n}곳</span></li>`).join('')}</ul>
+      <div class="divider my-5"></div>
+      <p class="text-sm leading-5 text-sub">가게마다 결과가 달라요.<br>늘어난 이유를 이 일 하나로 단정할 수는 없어요.</p>`;
+    $('[data-try]').href = `ai.html?idea=${i.id}`;
+  </script>
+</body>
+</html>

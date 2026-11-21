@@ -5,6 +5,7 @@ import type { StoreAddress } from '../types';
 import { Icon } from './Icon';
 
 interface AddressSuggestion extends StoreAddress {
+  postalCode: string;
   roadAddress: string;
   jibunAddress: string;
 }
@@ -39,10 +40,14 @@ export function AddressSearch({
   selected,
   onSelected,
   error,
+  inputClassName,
+  placeholder = '예: 여의동, 국회대로',
 }: {
   selected: StoreAddress | null;
   onSelected: (address: StoreAddress | null) => void;
   error?: string;
+  inputClassName?: string;
+  placeholder?: string;
 }) {
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
@@ -123,8 +128,8 @@ export function AddressSearch({
     setReply(null);
   }
 
-  function choose({ postalCode, address, megaCd, megaNm, ctyCd, ctyNm }: StoreAddress) {
-    onSelected({ postalCode, address, megaCd, megaNm, ctyCd, ctyNm });
+  function choose({ address, megaCd, megaNm, ctyCd, ctyNm }: StoreAddress) {
+    onSelected({ address, megaCd, megaNm, ctyCd, ctyNm });
     setText(address);
     closeList();
   }
@@ -186,7 +191,8 @@ export function AddressSearch({
           type="text"
           role="combobox"
           autoComplete="off"
-          placeholder="예: 여의동, 국회대로"
+          placeholder={placeholder}
+          className={inputClassName}
           maxLength={100}
           value={selected?.address ?? text}
           aria-autocomplete="list"

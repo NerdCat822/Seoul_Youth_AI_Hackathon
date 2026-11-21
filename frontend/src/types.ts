@@ -4,6 +4,7 @@ export type ExperimentStatus = 'PLANNED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED'
 
 export interface AuthSession {
   authenticated: boolean;
+  loginId: string | null;
   storeId: number | null;
   storeName: string | null;
   signupEnabled: boolean;
@@ -11,7 +12,6 @@ export interface AuthSession {
 }
 
 export interface StoreAddress {
-  postalCode: string;
   address: string;
   megaCd: string;
   megaNm: string;

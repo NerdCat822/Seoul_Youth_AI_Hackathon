@@ -4,7 +4,7 @@ import { asDate, formatDate } from '../lib/dates';
 import { useQuery } from '../lib/useQuery';
 import './forecast.css';
 
-interface Forecast {
+export interface Forecast {
   status: 'READY' | 'INSUFFICIENT_DATA';
   storeName: string;
   source: 'DATABASE_PREDICTIONS' | 'DB_HISTORY';

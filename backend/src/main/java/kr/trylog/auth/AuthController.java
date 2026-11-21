@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    public record SessionView(boolean authenticated, Integer storeId, String storeName,
+    public record SessionView(boolean authenticated, Integer storeId, String storeName, String loginId,
                               boolean signupEnabled, String csrfToken) {}
     public record LoginRequest(
             @NotBlank(message = "아이디를 입력해주세요.") @Size(max = 40, message = "아이디는 40자 이내로 입력해주세요.") String loginId,
@@ -47,7 +47,7 @@ public class AuthController {
     public SessionView session(HttpServletRequest request, HttpServletResponse response) {
         StorePrincipal store = StorePrincipal.current();
         return new SessionView(store != null, store == null ? null : store.storeId(),
-                store == null ? null : store.storeName(), accounts.signupEnabled(),
+                store == null ? null : store.storeName(), store == null ? null : store.loginId(), accounts.signupEnabled(),
                 tokens.loadDeferredToken(request, response).get().getToken());
     }
 

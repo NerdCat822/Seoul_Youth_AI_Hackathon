@@ -1,0 +1,16 @@
+{
+  "name": "trylog-web",
+  "version": "1.0.0",
+  "description": "Trylog PC 웹 (HTML + Tailwind + JS)",
+  "scripts": {
+    "build": "tailwindcss -i src/input.css -o assets/css/style.css --minify",
+    "watch": "tailwindcss -i src/input.css -o assets/css/style.css --watch",
+    "icons": "python3 tools/build-icons.py"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "remixicon": "^4.9.1",
+    "tailwindcss": "^3.4.19"
+  }
+}

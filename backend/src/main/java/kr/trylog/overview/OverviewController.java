@@ -50,8 +50,9 @@ public class OverviewController {
         }
         // PostgreSQL checks referenced columns and SELECT privileges even when no rows are requested.
         jdbc.queryForList("""
-                SELECT s.store_id, s.store_name, s.login_id, s.password_hash, s.postal_code, s.address,
-                       s.address_detail, s.upjong, u.upjong_cd, u.upjong_nm, u.display_order,
+                SELECT s.store_id, s.store_name, s.upjong, u.upjong_cd, u.upjong_nm, u.display_order, u.store_id,
+                       a.login_id, a.password_hash, a.store_id, a.store_name, a.address, a.address_detail,
+                       a.mega_cd, a.mega_nm, a.cty_cd, a.cty_nm, a.open_time, a.close_time, a.opened_date, a.closed_weekdays,
                        m.menu2_cd, m.menu2_nm, m.store_id, m.unit_price,
                        e.id, e.store_id, e.title, e.expm_category, e.action_type, e.target_menu2_cd,
                        e.start_date, e.end_date, e.notes, e.created_at, p.base_date, p.receipt_id,
@@ -62,7 +63,7 @@ public class OverviewController {
                 FROM seoul_youth_ai_hackathon.stores s, seoul_youth_ai_hackathon.menus m,
                      seoul_youth_ai_hackathon.experiments e, seoul_youth_ai_hackathon.pos_orders p,
                      seoul_youth_ai_hackathon.v_daily_sales_mart d, seoul_youth_ai_hackathon.ml_predictions f,
-                     seoul_youth_ai_hackathon.upjongs u
+                     seoul_youth_ai_hackathon.upjongs u, seoul_youth_ai_hackathon.store_accounts a
                 WHERE false
                 """);
         return Map.of("status", "READY");

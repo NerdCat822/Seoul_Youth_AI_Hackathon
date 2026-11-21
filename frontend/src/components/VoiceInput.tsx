@@ -71,10 +71,14 @@ export function VoiceInput({
   disabled = false,
   onTranscript,
   onBusyChange,
+  buttonClassName = 'chat-round',
+  microphoneIcon,
 }: {
   disabled?: boolean;
   onTranscript: (text: string) => void;
   onBusyChange?: (busy: boolean) => void;
+  buttonClassName?: string;
+  microphoneIcon?: import('react').ReactNode;
 }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState('');
@@ -256,7 +260,7 @@ export function VoiceInput({
       <span className="voice-actions">
         <button
           type="button"
-          className={recording ? 'chat-round voice-finish' : 'chat-round'}
+          className={recording ? buttonClassName + ' voice-finish' : buttonClassName}
           disabled={disabled || phase === 'permission' || phase === 'transcribing'}
           aria-label={label}
           title={label}
@@ -271,7 +275,7 @@ export function VoiceInput({
               완료
             </>
           ) : (
-            <Icon name="mic" size={18} />
+            (microphoneIcon ?? <Icon name="mic" size={18} />)
           )}
         </button>
       </span>

@@ -9,7 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
-public record StorePrincipal(int storeId, String storeName) implements Serializable {
+public record StorePrincipal(int storeId, String storeName, String loginId) implements Serializable {
     public static StorePrincipal require() {
         StorePrincipal store = current();
         if (store == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");

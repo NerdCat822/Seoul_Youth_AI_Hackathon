@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>탐색 · trylog</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-nav="explore">
+  <header data-topbar></header>
+
+  <main class="page">
+    <div class="container-main">
+      <h1 class="page-title">동네 가게들은 뭘 해봤을까?</h1>
+      <p class="page-desc">비슷한 상황의 가게가 어떤 시도를 했는지 찾아보세요.</p>
+
+      <div class="mt-8 flex items-center justify-between">
+        <div class="flex gap-1" role="tablist" aria-label="분야" data-cat-tabs></div>
+        <button type="button" class="chip gap-1" aria-pressed="false" data-free>
+          <span data-icon="check" data-size="16"></span>비용 0원만 보기</button>
+      </div>
+
+      <section class="mt-14" data-rec-section>
+        <h2 class="section-title-lg font-semibold">행복분식에 맞는 추천</h2>
+        <p class="mt-1 text-sm text-sub">분식 · 매장 식사 · 포장 기준</p>
+        <div class="mt-5 grid grid-cols-3 gap-6" data-rec></div>
+      </section>
+
+      <section class="mt-16">
+        <h2 class="section-title-lg font-semibold">전체 사례</h2>
+        <div class="mt-5 grid grid-cols-3 gap-6" data-all></div>
+        <p class="rounded-card bg-surface-2 py-16 text-center text-base text-sub" data-empty hidden>조건에 맞는 사례가 없어요.</p>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    const { $, $$, icon, params, ideaCard } = App;
+    const D = TRYLOG;
+    const state = { cat: 'all', free: params.get('free') === '1' };
+    const tabs = [['all', '전체'], ...Object.entries(D.categories).map(([k, c]) => [k, c.label])];
+
+    function render() {
+      const list = D.ideas.filter(i => (state.cat === 'all' || i.cat === state.cat) && (!state.free || i.free));
+      $('[data-cat-tabs]').innerHTML = tabs.map(([k, l]) => {
+        const n = D.ideas.filter(i => (k === 'all' || i.cat === k) && (!state.free || i.free)).length;
+        return `<button type="button" role="tab" class="filter-tab" aria-selected="${state.cat === k}" data-cat="${k}">${l} <span class="count">${n}</span></button>`;
+      }).join('');
+      const rec = D.ideas.filter(i => i.rec && (state.cat === 'all' || i.cat === state.cat) && (!state.free || i.free));
+      $('[data-rec-section]').hidden = !rec.length;
+      $('[data-rec]').innerHTML = rec.map(i => ideaCard(i)).join('');
+      $('[data-all]').innerHTML = list.map(i => ideaCard(i)).join('');
+      $('[data-empty]').hidden = !!list.length;
+      $('[data-free]').setAttribute('aria-pressed', String(state.free));
+    }
+    $('[data-cat-tabs]').addEventListener('click', e => { const t = e.target.closest('[data-cat]'); if (t) { state.cat = t.dataset.cat; render(); } });
+    $('[data-free]').addEventListener('click', () => { state.free = !state.free; render(); });
+    App.hydrateIcons();
+    render();
+  </script>
+</body>
+</html>
