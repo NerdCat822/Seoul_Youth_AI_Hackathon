@@ -80,6 +80,13 @@ services:
       TRYLOG_DEMO_DATE: ${TRYLOG_DEMO_DATE:-}
       TRYLOG_ML_DIR: /srv/ml
       CSV_DIR: /srv/ml/data
+      # 멀티턴 대화 상태(LangGraph 체크포인트)를 공용 DB의 trylog_agent 스키마에 둔다. 재시작해도 대화가 이어진다
+      DB_HOST: postgres-db
+      DB_PORT: 5432
+      DB_NAME: hgkim_postgresql
+      DB_USER: ${DB_USER:-nerdcat822}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      TRYLOG_AGENT_SCHEMA: trylog_agent
     ports:
       - "127.0.0.1:7500:7500" # 서버 안에서만
     volumes:

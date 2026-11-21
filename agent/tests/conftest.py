@@ -13,7 +13,7 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient
 
 from tests.fake_spring import create_fake_spring
-from trylog_agent import llm, reply, routes
+from trylog_agent import llm, routes
 from trylog_agent.graph.build import reset_graphs
 from trylog_agent.main import app
 from trylog_agent.tools import spring as spring_tools
@@ -24,7 +24,6 @@ def _isolate(monkeypatch):
     """테스트마다 대화 상태를 비우고, 실제 LLM 호출을 막는다."""
     reset_graphs()
     routes._threads.clear()
-    reply._history.clear()
     monkeypatch.setattr(llm, "is_ready", lambda: False)
     yield
     spring_tools.set_spring(None)

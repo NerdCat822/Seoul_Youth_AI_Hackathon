@@ -49,6 +49,19 @@ Docker에서는 이 저장소의 Spring에 맞춰 `TRYLOG_SPRING_URL=http://tryl
 
 `health`를 뺀 에이전트 경로는 로그인한 가게만 쓸 수 있다. 화면이 보낸 세션 쿠키와 `X-CSRF-TOKEN`을 Spring 호출에 그대로 넘겨, Spring이 그 가게의 요청으로 처리한다. 대상 메뉴도 로그인한 가게의 메뉴(Spring `/menus`)에서 찾는다. 로그인하지 않은 요청은 401이다.
 
+## 멀티턴 대화 상태
+
+대화는 `threadId` 하나로 이어진다. 상태는 `trylog_agent/memory.py`가 정한 곳에 둔다.
+
+- `DB_PASSWORD`(또는 `TRYLOG_AGENT_DB_URL`)가 있으면 Postgres의 `trylog_agent` 스키마에 둔다. 에이전트를 다시 띄워도, 여러 개 띄워도 대화가 이어진다.
+  - LangGraph `PostgresSaver`의 체크포인트 테이블 4개: 초안·질문·확인 대기 같은 그래프 상태
+  - `conversations`: 대화가 어느 가게의 것인지. 다른 가게는 이어 쓸 수 없다
+  - `conversation_turns`: 주고받은 말. 답 문장을 쓸 때 최근 3차례를 보여 준다
+  - 테이블은 서버가 처음 뜰 때 만든다. 30일 동안 말이 없던 대화는 서버를 띄울 때와 새 대화 100개마다 지운다
+- 설정이 없으면(개발·테스트) 서버 메모리에 둔다. 다시 띄우면 사라진다.
+- 상태 확인(`/health`)의 `conversationStore`가 `postgres`, `memory`, `unavailable`(연결 실패) 중 하나로 보인다.
+- Postgres 연동 테스트는 `TRYLOG_TEST_DB_URL`을 줄 때만 돈다. 임시 스키마를 만들고 끝나면 지운다.
+
 ## 음성 입력 (STT)
 
 다른 개발자에게 공유할 사용법은 [STT_API.md](STT_API.md)에 따로 정리했다.
@@ -98,5 +111,9 @@ curl -X POST http://127.0.0.1:7500/api/v1/agent/stt -H "Cookie: JSESSIONID=..." 
 | `TRYLOG_TTS_MODEL` | `gpt-4o-mini-tts` | 답 읽기 모델 |
 | `TRYLOG_TTS_VOICE` | `coral` | 답 읽기 목소리 |
 | `TRYLOG_TTS_TIMEOUT` | `20` | 답 읽기 한 번의 제한 시간(초) |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | `localhost`, `5432`, `hgkim_postgresql`, `nerdcat822`, 없음 | 멀티턴 대화 상태를 둘 Postgres. `DB_PASSWORD`가 없으면 서버 메모리에 둔다 |
+| `TRYLOG_AGENT_DB_URL` | 없음 | 위 대신 쓸 libpq 접속 문자열 |
+| `TRYLOG_AGENT_SCHEMA` | `trylog_agent` | 대화 상태 테이블을 둘 스키마 |
+| `TRYLOG_CHAT_TTL_DAYS` | `30` | 이 기간 동안 말이 없던 대화는 지운다 |
 | `TRYLOG_REQUIRE_LOGIN` | `0` | `1`이면 Spring에 로그인을 확인할 수 없을 때 요청을 받지 않는다. 공개 주소에 여는 배포에서 켠다 |
 | `CSV_DIR`, `TRYLOG_ML_DIR` | `ml/data`, `ml` | 자료와 서재원 코드의 위치 |

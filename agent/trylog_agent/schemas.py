@@ -93,6 +93,7 @@ class HealthResponse(BaseModel):
     mlBaseToday: Optional[str] = None
     dateMatch: bool
     sttReady: bool = False
+    conversationStore: Optional[str] = None
     sttModel: Optional[str] = None
     ttsReady: bool = False
     ttsModel: Optional[str] = None

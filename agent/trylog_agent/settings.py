@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -46,6 +47,32 @@ def load_env_files() -> list[str]:
     return loaded
 
 
+def _quote(value: str) -> str:
+    """libpq 접속 문자열의 값 하나를 따옴표로 감싼다."""
+    return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+
+def _agent_db(schema: str) -> str | None:
+    """대화 상태를 둘 Postgres 접속 문자열. 설정이 없으면 None(메모리에 둔다).
+
+    TRYLOG_AGENT_DB_URL 이 있으면 그것을, 없으면 Spring과 같은 DB_HOST·DB_PORT·DB_NAME·DB_USER·DB_PASSWORD를 쓴다.
+    테이블은 search_path 로 에이전트 스키마에 만든다.
+    """
+    url = os.getenv("TRYLOG_AGENT_DB_URL", "").strip()
+    password = os.getenv("DB_PASSWORD", "")
+    if not url and not password:
+        return None
+    if url:
+        return url
+    parts = {
+        "host": os.getenv("DB_HOST", "localhost"), "port": os.getenv("DB_PORT", "5432"),
+        "dbname": os.getenv("DB_NAME", "hgkim_postgresql"), "user": os.getenv("DB_USER", "nerdcat822"),
+        "password": password, "connect_timeout": "5", "application_name": "trylog-agent",
+        "options": f"-c search_path={schema}",
+    }
+    return " ".join(f"{key}={_quote(value)}" for key, value in parts.items())
+
+
 def _flag(name: str, default: bool) -> bool:
     raw = os.getenv(name)
     if raw is None or raw.strip() == "":
@@ -73,6 +100,9 @@ class Settings:
     spring_fields: int
     report_preview: bool
     require_login: bool
+    agent_db_conninfo: str | None
+    agent_schema: str
+    chat_ttl_days: int
     stt_model: str
     stt_timeout: float
     stt_max_bytes: int
@@ -89,6 +119,9 @@ class Settings:
 def get_settings() -> Settings:
     load_env_files()
     forecast_source = os.getenv("TRYLOG_FORECAST_SOURCE", "spring").strip().lower()
+    schema = os.getenv("TRYLOG_AGENT_SCHEMA", "trylog_agent").strip().lower()
+    if not re.fullmatch(r"[a-z_][a-z0-9_]{0,62}", schema):
+        raise ValueError("TRYLOG_AGENT_SCHEMA 는 영문 소문자, 숫자, 밑줄만 쓸 수 있어요.")
     if forecast_source not in {"spring", "ml"}:
         forecast_source = "spring"
     return Settings(
@@ -113,6 +146,10 @@ def get_settings() -> Settings:
         report_preview=_flag("TRYLOG_REPORT_PREVIEW", False),
         # 공개 주소에 여는 배포에서는 켠다. Spring에 로그인을 확인할 수 없으면 요청을 받지 않는다.
         require_login=_flag("TRYLOG_REQUIRE_LOGIN", False),
+        # 멀티턴 대화 상태(LangGraph 체크포인트)를 둘 곳. trylog_agent/memory.py 참고
+        agent_db_conninfo=_agent_db(schema),
+        agent_schema=schema,
+        chat_ttl_days=int(os.getenv("TRYLOG_CHAT_TTL_DAYS", "30")),
         # 음성 입력(OpenAI 음성 전사). 키는 OPENAI_API_KEY 환경변수로만 받는다.
         stt_model=os.getenv("TRYLOG_STT_MODEL", "gpt-4o-mini-transcribe").strip(),
         stt_timeout=float(os.getenv("TRYLOG_STT_TIMEOUT", "20")),

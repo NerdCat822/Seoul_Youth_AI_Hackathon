@@ -1,14 +1,15 @@
 """그래프 조립과 대화 상태 저장소.
 
-대화 하나는 `thread_id` 하나다. 상태는 서버 메모리에 두므로 서버를 다시 띄우면 사라진다.
+대화 하나는 `thread_id` 하나다. 상태는 memory.checkpointer()에 둔다.
+DB 설정이 있으면 Postgres(재시작해도 이어짐), 없으면 서버 메모리다.
 """
 from __future__ import annotations
 
 from functools import lru_cache
 
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from .. import memory
 from . import nodes
 from .state import AgentState, ExplainState
 
@@ -38,7 +39,7 @@ def chat_graph():
                             {"cancel": "cancel", "validate": "validate", "classify_intent": "classify_intent"})
     g.add_edge("cancel", END)
     g.add_edge("guide", END)
-    return g.compile(checkpointer=InMemorySaver())
+    return g.compile(checkpointer=memory.checkpointer())
 
 
 @lru_cache(maxsize=1)
@@ -72,6 +73,7 @@ def explain_graph():
 
 def reset_graphs() -> None:
     """테스트에서 대화 상태를 비운다."""
+    memory.reset()
     chat_graph.cache_clear()
     draft_graph.cache_clear()
     explain_graph.cache_clear()

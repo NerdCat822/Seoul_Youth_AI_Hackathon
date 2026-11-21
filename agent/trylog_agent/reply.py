@@ -7,16 +7,13 @@ LLM을 쓸 수 없거나, 시간이 모자라거나, 자료에 없는 숫자가 
 from __future__ import annotations
 
 import logging
-import threading
-from collections import OrderedDict, deque
 from datetime import date
 
-from . import llm
+from . import llm, memory
 from .tools.guard import allowed_numbers, unknown_numbers
 
 log = logging.getLogger("trylog.reply")
-HISTORY_TURNS = 6          # 답을 쓸 때 함께 보여 줄 최근 대화 줄 수
-MAX_THREADS = 300
+HISTORY_TURNS = 3          # 답을 쓸 때 함께 보여 줄 최근 대화 차례 수(사장님 말 + 비서 답)
 
 # 단계마다 꼭 전할 내용. 그래프의 기본 문장은 '기본 문장'으로 함께 넘긴다.
 MUST_SAY = {
@@ -32,23 +29,20 @@ MUST_SAY = {
     "CANCELLED": "기록을 저장하지 않았다고 알리고, 언제든 다시 말해도 된다고 한다.",
 }
 
-_history: "OrderedDict[str, deque[str]]" = OrderedDict()
-_guard = threading.Lock()
-
-
 def remember(thread_id: str, owner: str, answer: str) -> None:
-    """대화의 한 차례를 기억한다. 오래된 대화부터 잊는다."""
-    with _guard:
-        lines = _history.pop(thread_id, None) or deque(maxlen=HISTORY_TURNS)
-        lines.extend([f"사장님: {owner}", f"비서: {answer}"])
-        _history[thread_id] = lines
-        while len(_history) > MAX_THREADS:
-            _history.popitem(last=False)
+    """대화의 한 차례를 남긴다(memory: Postgres 또는 서버 메모리)."""
+    try:
+        memory.conversations().append(thread_id, owner, answer)
+    except Exception as exc:  # 기록을 남기지 못해도 답은 돌려준다
+        log.warning("대화 기록을 남기지 못했습니다: %s", type(exc).__name__)
 
 
 def recent(thread_id: str) -> list[str]:
-    with _guard:
-        return list(_history.get(thread_id) or [])
+    try:
+        return memory.conversations().history(thread_id, HISTORY_TURNS)
+    except Exception as exc:
+        log.warning("최근 대화를 읽지 못했습니다: %s", type(exc).__name__)
+        return []
 
 
 def _days(start: str | None, end: str | None) -> list[int]:
